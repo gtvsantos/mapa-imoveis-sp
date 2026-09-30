@@ -116,8 +116,12 @@ table.t.clk:not(.lnk) tbody tr{cursor:pointer}
 .lotcard .lc-h span{font-size:12px}
 .lotcard .lc-k{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:12px;color:var(--ink-2)}
 .lotcard .lc-k b{color:var(--ink);font-weight:500;font-family:var(--f-mono)}
-.lotcard .chart{height:170px}
+/* coluna flex: com a tabela longa o gráfico era espremido (7 px de altura). Tudo com altura própria; só a tabela cede e rola. */
+.lotcard > *{flex:0 0 auto}
+.lotcard .chart{flex:0 0 170px;height:170px;min-height:170px}
 .lotcard .lc-n{margin:0}
+.lotcard .lc-t{flex:1 1 auto;min-height:150px;overflow:auto}
+.lotcard .lc-t table.t th{position:sticky;top:0;z-index:1}
 .lotcard .lc-t table.t{font-size:11.5px}
 .lotcard .lc-t table.t th,.lotcard .lc-t table.t td{padding:4px 6px}
 .lotcard .lc-f{display:flex;justify-content:flex-end}
