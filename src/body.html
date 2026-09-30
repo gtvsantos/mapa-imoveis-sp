@@ -1,0 +1,145 @@
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div><h1>Radar ITBI · São Paulo</h1><p>Vendas registradas na Prefeitura (ITBI) · 2006 até <span id="lastQ"></span></p></div>
+    </div>
+    <div class="estrato" role="group" aria-label="Estrato do imóvel (controle principal)">
+      <!-- os botões de tipo vêm do meta (data.json): seis grupos, ver app.js (I-036) -->
+      <div class="seg" id="tipoSeg"></div>
+      <span class="vsep" aria-hidden="true"></span>
+      <div class="seg" id="dimSeg">
+        <button type="button" data-d="area" title="Área construída do IPTU (inclui a fração das áreas comuns)">Tamanho</button>
+        <button type="button" data-d="padrao" title="Padrão construtivo do IPTU (A = mais simples … F = mais alto)">Padrão</button>
+        <button type="button" data-d="idade" title="Anos entre o fim da obra (ACC do IPTU) e a venda">Idade</button>
+        <button type="button" data-d="quartos" title="Estimado dentro do prédio pelos anúncios QuintoAndar (acerto 73–87%); só apartamentos">Quartos</button>
+      </div>
+      <div class="fx" id="fxChips" role="group" aria-label="Faixa"></div>
+    </div>
+  </header>
+
+  <nav class="rail" id="nav" aria-label="Abas">
+    <div class="busca" id="busca" role="search">
+      <input type="search" id="buscaRua" placeholder="Buscar rua…" autocomplete="off" spellcheck="false" aria-label="Buscar rua" aria-autocomplete="list" aria-controls="buscaList">
+      <div class="busca-l" id="buscaList" role="listbox" aria-label="Sugestões de rua" hidden></div>
+    </div>
+    <div id="railViews"></div>
+    <div class="railnote" id="railNote"></div>
+  </nav>
+
+  <main id="main">
+    <!-- Cidade -->
+    <section class="view" id="v-cidade" hidden>
+      <div class="ctrlrow" id="cityCtrl" role="group" aria-label="Vista pronta e cor do mapa"></div>
+      <div class="card citymap" style="padding:8px 10px 10px">
+        <div id="mapCity" class="chart map" role="img" aria-label="Mapa dos distritos e lotes com venda"></div>
+        <div class="legend" id="mapLegend"></div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <h3>Trajetória do preço por faixa · cidade</h3>
+          <p class="sub" id="trajSub"></p>
+          <div id="cityTraj" class="chart" style="height:340px"></div>
+          <div class="legend" id="trajLegend"></div>
+        </div>
+        <div class="card">
+          <h3>Vendas por trimestre · cidade</h3>
+          <p class="sub">Negócios com SQL próprio (revenda e usados, azul) e unidades na planta vendidas sobre o terreno (laranja), que ficam fora do R$/m².</p>
+          <div id="cityVol" class="chart" style="height:340px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quadrante -->
+    <section class="view" id="v-quadrante" hidden>
+      <div class="vhead"><div><span class="eyebrow">Quadrante</span><h2>Nível de preço × tendência, por distrito</h2></div>
+        <p>Eixo horizontal: R$/m² mediano dos últimos 12 meses. Vertical: variação contra os 12 meses anteriores. As linhas cruzam na cidade. Barras = intervalo de 95% da mediana. Tamanho = nº de vendas. Clique numa bolha para ver o rastro de 8 trimestres; clique de novo para abrir o distrito.</p></div>
+      <div class="ctrlrow"><span class="lab">Mínimo de vendas no período</span>
+        <div class="seg" id="qminSeg"><button type="button" data-n="30">30</button><button type="button" data-n="60">60</button><button type="button" data-n="120">120</button></div>
+        <label class="chk"><input type="checkbox" id="qCI" checked> Intervalos de confiança</label>
+        <label class="chk"><input type="checkbox" id="qLab" checked> Nomes</label>
+      </div>
+      <div class="card">
+        <div id="quadChart" class="chart cyc" role="img" aria-label="Dispersão R$/m² × variação em 12 meses por distrito"></div>
+        <div class="legend" id="quadLegend"></div>
+        <div class="quadlist" id="quadList"></div>
+      </div>
+      <div class="card"><h3>Ranking</h3><p class="sub" id="quadSub"></p><div class="tablewrap tall" id="quadTable"></div></div>
+    </section>
+
+    <!-- Distrito -->
+    <section class="view" id="v-distrito" hidden>
+      <div class="vhead"><div><span class="eyebrow">Distrito</span><h2 id="dTitle">—</h2></div>
+        <p id="dLede"></p>
+        <label style="margin-left:auto" class="dsel" for="distSel">Distrito <select id="distSel"></select></label></div>
+      <div class="kpis" id="dKpis"></div>
+      <div class="ctrlrow"><span class="lab">Janela</span>
+        <div class="seg" id="rangeSeg"><button type="button" data-y="5">5 anos</button><button type="button" data-y="10">10 anos</button><button type="button" data-y="20">desde 2006</button></div>
+        <label class="chk"><input type="checkbox" id="cityRef" checked> Comparar com a cidade</label>
+      </div>
+      <div class="card">
+        <div class="smgrid">
+          <div class="sm"><h4>Preço por faixa <span class="legend" id="smPriceLeg"></span></h4><div id="smPrice" class="chart" style="height:250px"></div><p class="note" id="smPriceNote"></p></div>
+          <div class="sm"><h4>Vendas por trimestre <span class="legend"><span class="it"><i class="dot" style="border-radius:2px;background:var(--s1)"></i>SQL próprio</span><span class="it"><i class="dot" style="border-radius:2px;background:var(--s2)"></i>planta (fora do preço)</span></span></h4><div id="smVol" class="chart sm"></div></div>
+          <div class="sm"><h4>Com financiamento <span class="muted" style="font-weight:400">% das vendas residenciais com valor financiado</span></h4><div id="smFin" class="chart sm"></div></div>
+          <div class="sm"><h4>Novo × usado × planta <span class="muted" style="font-weight:400">% das vendas de apartamento</span></h4><div id="smNovo" class="chart sm"></div></div>
+          <div class="sm"><h4>Giro <span class="muted" style="font-weight:400">apartamentos vendidos ÷ estoque de apartamentos do IPTU, % ao ano</span></h4><div id="smGiro" class="chart sm"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Distritos por tipologia</h3>
+        <p class="sub" id="dtSub"></p>
+        <div class="ctrlrow" style="margin:4px 0 8px"><span class="lab">Mostrar</span>
+          <div class="seg" id="dtMet"><button type="button" data-m="m">Preço 12 m</button><button type="button" data-m="dv">Variação 12 m</button><button type="button" data-m="n">Vendas 12 m</button></div>
+          <label>Buscar <input type="search" id="dtSearch" placeholder="distrito…" autocomplete="off"></label></div>
+        <div class="tablewrap" id="dtTable"></div>
+        <p class="note" id="dtNote"></p>
+      </div>
+      <div class="card">
+        <h3>Quanto fica fora do preço, por distrito e ano</h3>
+        <p class="sub">% das vendas de apartamento, casa, sala, loja e planta que não entram no R$/m²: planta (unidade vendida sobre o SQL do terreno) + sinalizadas (valor simbólico, abaixo de 30% do VVR, bloco, extremos). Verde = preço representativo; vermelho = preço calculado sobre poucas vendas. Passe o mouse para ver os números.</p>
+        <div id="exclHeat" class="chart" style="height:520px"></div>
+      </div>
+      <div class="card">
+        <h3>Prédios e lotes do distrito</h3>
+        <p class="sub" id="bldSub"></p>
+        <div class="ctrlrow" style="margin-bottom:6px"><label>Buscar <input type="search" id="bldSearch" placeholder="endereço ou nome do prédio…" autocomplete="off"></label>
+          <label class="chk"><input type="checkbox" id="bldOnlyStr" checked> Só do tipo selecionado</label></div>
+        <div class="tablewrap" id="bldTable"></div>
+        <p class="note"><b>Padrão</b> = padrão construtivo atribuído pela Prefeitura no cadastro do IPTU (campo "tipo de padrão da construção", que vem junto em cada guia de ITBI): <b>A</b> é o mais simples e <b>F</b> o mais alto, pela tabela de valores de construção da Lei municipal 10.235/1986 (base do valor venal). Não é auditado aqui e reflete o cadastro vigente quando a Prefeitura gerou o arquivo, não a data da venda.</p>
+      </div>
+    </section>
+
+    <!-- Prédio -->
+    <section class="view" id="v-predio" hidden>
+      <div class="vhead"><div><span class="eyebrow">Prédio / lote</span></div></div>
+      <div class="card"><div class="asset-head" id="pHead"></div></div>
+      <div class="kpis" id="pKpis"></div>
+      <div class="two">
+        <div class="card">
+          <h3>Vendas do lote ao longo do tempo</h3>
+          <p class="sub" id="pHistSub"></p>
+          <div id="pHist" class="chart md" style="height:300px"></div>
+          <div class="legend" id="pHistLeg"></div>
+        </div>
+        <div class="card">
+          <h3>Comparáveis no entorno</h3>
+          <div class="ctrlrow" style="margin:6px 0 4px">
+            <label class="slider" for="radius">Raio <input type="range" id="radius" min="0.25" max="3" step="0.25" value="1"> <b class="num" id="radiusVal">1,0 km</b></label>
+            <label class="slider" for="compYears">Janela <select id="compYears"><option value="1">12 meses</option><option value="2" selected>24 meses</option><option value="3">36 meses</option></select></label>
+          </div>
+          <div id="pMap" class="chart" style="height:380px"></div>
+          <div class="legend" id="pMapLeg"></div>
+          <p class="note" id="compSummary"></p>
+        </div>
+      </div>
+      <div class="three">
+        <div class="card"><h3>Tipologias</h3><p class="sub" id="pTipSub">Unidades do cadastro (IPTU) e anúncios QuintoAndar dentro do lote (foto de 20/06/2026).</p><div id="pTip"></div></div>
+        <div class="card" style="grid-column:span 2"><h3>Comparáveis do mesmo estrato</h3><p class="sub" id="compSub"></p><div class="tablewrap" id="compTable"></div></div>
+      </div>
+      <div class="card"><h3>Negócios registrados no lote</h3><p class="sub">Todas as vendas (natureza compra e venda) do lote. Em cinza, as que ficam fora do R$/m², com o motivo.</p><div class="tablewrap" id="pDeals"></div></div>
+    </section>
+  </main>
+
+  <footer class="dq" id="footer"></footer>
+</div>

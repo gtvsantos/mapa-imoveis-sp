@@ -1,0 +1,45 @@
+/* ── módulo Aluguel e yield: violeta de um só matiz (mesmos tons de R.VIOLET), texto sempre em tinta ── */
+:root{ --al-1:#9895f0; --al-2:#7f79e2; --al-3:#685dcf; --al-4:#5343b7; --al-5:#3f2e95; --al-6:#2c1f6e; --al-wash:rgba(104,93,207,.14); }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --al-1:#564cae; --al-2:#6b63ce; --al-3:#827ce6; --al-4:#9b99f3; --al-5:#b5b5fc; --al-6:#d2d3ff; --al-wash:rgba(130,124,230,.18); } }
+:root[data-theme="dark"]{ --al-1:#564cae; --al-2:#6b63ce; --al-3:#827ce6; --al-4:#9b99f3; --al-5:#b5b5fc; --al-6:#d2d3ff; --al-wash:rgba(130,124,230,.18); }
+.al-selo{display:inline-block;font-size:10.5px;line-height:1.5;padding:0 7px;border-radius:999px;border:1px dashed var(--al-3);color:var(--ink-2);white-space:nowrap;vertical-align:middle;font-weight:500;letter-spacing:.01em}
+.al-hint{font-size:12px;color:var(--ink-2);display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+.al-warn{font-size:12px;color:var(--ink);border-left:3px solid var(--al-3);padding:2px 8px;background:var(--al-wash);border-radius:0 6px 6px 0}
+#alCtrl{gap:8px 14px}
+#alCtrl .fx button[disabled]{opacity:.45;cursor:not-allowed}
+.al-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+.al-grid .chart.map{height:min(68vh,600px)}
+.al-kchip{font-size:13px;color:var(--ink-2);margin:0}
+.al-kchip b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.al-rb{position:relative;display:inline-block;width:64px;height:10px;vertical-align:middle;margin-right:6px}
+.al-rb .tr{position:absolute;left:0;right:0;top:4px;height:2px;background:var(--grid);border-radius:1px}
+.al-rb .iq{position:absolute;top:1px;height:8px;background:var(--al-3);opacity:.45;border-radius:2px}
+.al-rb .md{position:absolute;top:0;width:2px;height:10px;background:var(--ink)}
+.al-fb{color:var(--muted);font-style:italic}
+.al-notes ol{margin:4px 0 0;padding-left:18px;display:grid;gap:4px;font-size:12.5px;color:var(--ink-2)}
+.al-notes ol b{color:var(--ink);font-weight:600}
+.al-notes h3{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.al-sm{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px 18px;margin-top:10px}
+.al-smc h4{font-size:12.5px;margin:0 0 2px;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline}
+.al-smc h4 small{font-family:var(--f-body);font-weight:400;color:var(--ink-2);font-size:11px}
+.al-leg{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:11.5px;color:var(--ink-2);margin-top:6px}
+.al-leg .it{display:inline-flex;align-items:center;gap:5px}
+.al-dia{width:9px;height:9px;transform:rotate(45deg);display:inline-block;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.al-cir{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--ink)}
+.al-tick{width:2px;height:12px;display:inline-block;background:var(--muted)}
+.al-iqr{width:18px;height:8px;display:inline-block;background:var(--al-3);opacity:.45;border-radius:2px}
+.al-pdot{width:12px;height:12px;border-radius:50%;display:inline-block;background:var(--al-4);box-shadow:0 0 0 2px var(--ink)}
+.al-pdot.s{width:8px;height:8px;box-shadow:0 0 0 1px var(--surface);opacity:.55}
+.al-tb td.q{font-weight:600}
+.al-tb tr.tot td{border-top:1px solid var(--border-strong);font-weight:600}
+.al-tb small{color:var(--muted);font-size:10.5px;margin-left:3px}
+.al-facts{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 0;font-size:12.5px;color:var(--ink-2)}
+.al-facts b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.al-facts .flag{border-left:3px solid var(--al-3);padding-left:6px}
+.al-empty{font-size:13px;color:var(--ink-2);margin:2px 0 6px}
+.al-open{margin-left:auto}
+.al-dhead{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:0 0 8px}
+.al-dhead .sub{margin:0}
+.bm-host .al-toast{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:5;background:var(--ink);color:var(--surface);border-radius:8px;padding:6px 10px;font-size:12.5px;box-shadow:var(--shadow);max-width:80%}
+@media (max-width:1180px){ .al-grid{grid-template-columns:minmax(0,1fr)} }
+.al-ch{font-size:11.5px;font-weight:600;color:var(--ink-2);margin:6px 0 0;font-family:var(--f-head);letter-spacing:.02em}

@@ -1,0 +1,62 @@
+# Atualização dos dados públicos (ITBI) e remontagem do site — PROPOSTA, só com gatilho manual.
+#
+# Pré-requisitos para a execução real (por isso o passo fica comentado):
+#   - insumos brutos (~2 GB) que não estão no repositório: data/cache/itbi/raw/ITBI_*.xlsx (~500 MB, 2006–2026),
+#     raw/iptu/IPTU_*.zip ou iptu_*_slim.parquet (17 exercícios, ~1,1 GB), raw/lotes/lotes_sp.parquet (lotes fiscais,
+#     237 MB) e as camadas WFS/CNES/INEP/SSP/OSM em raw/;
+#   - os parquets intermediários research/stage/fase2_*.parquet, gerados pelos scripts de pesquisa em research/fase2/
+#     (não são reproduzíveis só com a internet: um deles usa uma base de anúncios congelada de 20/06/2026);
+#   - research/stage/geo_distritos.json (snapshot dos distritos; dispensa o Postgres local);
+#   - ~30 min de processamento e ~8 GB de RAM (duckdb) no runner.
+# Sem um cache desses insumos (actions/cache, artefato ou bucket), o runner só consegue rodar o --dry-run,
+# que já mostra se a Prefeitura publicou arquivo novo.
+
+name: atualizar-dados
+
+on:
+  workflow_dispatch:
+  # Agendamento mensal (dia 1, 09:00 UTC) — ligar só quando os insumos estiverem em cache:
+  # schedule:
+  #   - cron: '0 9 1 * *'
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dependências da cadeia
+        run: pip install duckdb pandas pyarrow shapely openpyxl
+
+      # O repositório do site é irmão de data/cache/itbi no layout de desenvolvimento. No runner não há
+      # data/cache/itbi: aponte ITBI_DIR para onde os insumos forem restaurados (cache/artefato).
+      - name: Conferir novidades na Prefeitura (dry-run)
+        env:
+          ITBI_DIR: ${{ github.workspace }}/../data/cache/itbi
+        run: |
+          mkdir -p "$ITBI_DIR/raw" "$ITBI_DIR/research" "$ITBI_DIR/proto"
+          python atualizar_dados.py --dry-run
+
+      # Execução real: baixa o que mudou, roda a cadeia e remonta o site; depois commita os JSONs e o index.html.
+      # Descomentar só com os insumos e os parquets fase2_* restaurados em $ITBI_DIR (ver cabeçalho).
+      # - name: Atualizar e remontar
+      #   env:
+      #     ITBI_DIR: ${{ github.workspace }}/../data/cache/itbi
+      #   run: python atualizar_dados.py --iptu
+      #
+      # - name: Commit e push dos dados
+      #   run: |
+      #     git config user.name  "github-actions[bot]"
+      #     git config user.email "github-actions[bot]@users.noreply.github.com"
+      #     git add index.html data.json build_info.json dist flips contexto aluguel terrenos src pipeline
+      #     git diff --cached --quiet && echo "sem mudança" && exit 0
+      #     git commit -m "dados: atualização $(date -u +%Y-%m-%d)"
+      #     git push

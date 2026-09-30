@@ -1,0 +1,96 @@
+/* ── m_contexto: contexto urbano (glifos em tinta, hachuras, régua "o que tem perto") ── */
+:root{ --ctx-h: rgba(11,11,11,.55); --ctx-h2: rgba(11,11,11,.42); --ctx-crit:#d03b3b; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ctx-h: rgba(255,255,255,.6); --ctx-h2: rgba(255,255,255,.45); --ctx-crit:#f07a78; } }
+:root[data-theme="dark"]{ --ctx-h: rgba(255,255,255,.6); --ctx-h2: rgba(255,255,255,.45); --ctx-crit:#f07a78; }
+
+/* glifo de equipamento (círculo = fonte oficial; quadrado = OSM; cinza = tom neutro) */
+.ctx-gl{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 3px;box-sizing:border-box;border:1.4px solid var(--ink);border-radius:999px;
+  background:var(--surface);color:var(--ink);font-family:var(--f-head);font-weight:600;font-size:10.5px;line-height:1;letter-spacing:-.02em;flex:none;vertical-align:middle}
+.ctx-gl.sq{border-radius:4px}
+.ctx-gl.neu{border-color:var(--muted);color:var(--muted)}
+.ctx-gl + .ctx-gl{margin-left:3px}
+.lyp-sub small{font-size:10px;color:var(--muted)}
+
+/* chaves de linha e amostras de hachura (legenda e painel) */
+.ctx-lk{display:inline-block;width:22px;height:0;border-top:3px solid var(--ink);vertical-align:middle;border-radius:2px}
+.ctx-lk.dash{border-top-style:dashed;border-top-width:2.5px}
+.ctx-lk.dot{border-top:3px dotted var(--ink-2)}
+.ctx-lk.thin{border-top:2px solid var(--muted);width:16px}
+.ctx-lk.poly{border-top:2px dashed var(--ink);width:18px}
+.ctx-lk.mini{width:16px;border-top-width:2.5px}
+.ctx-sq{display:inline-block;width:9px;height:9px;border:2px solid var(--ink-2);background:var(--surface);vertical-align:middle;box-sizing:border-box}
+.ctx-sq.mini{width:10px;height:10px}
+.ctx-sw{display:inline-block;width:18px;height:12px;border:1px solid var(--ink-2);border-radius:2px;background-color:var(--surface);vertical-align:middle;box-sizing:border-box}
+.ctx-sw.strong{border:1.6px solid var(--ink)}
+.ctx-sw.com{background:rgba(11,11,11,.1);border:1.4px solid var(--ink)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ctx-sw.com{background:rgba(255,255,255,.12)} }
+:root[data-theme="dark"] .ctx-sw.com{background:rgba(255,255,255,.12)}
+.legend .ctx-zleg{display:inline-flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.legend .ctx-zleg > b{font-weight:500;color:var(--ink)}
+
+/* ── seção "O que tem perto" ── */
+.ctx-grid{display:grid;grid-template-columns:minmax(150px,210px) minmax(0,1fr) 52px 52px 74px;column-gap:10px;row-gap:0;align-items:center;font-size:12px;margin-top:4px}
+.ctx-row{display:contents}
+.ctx-row > *{padding:3px 0;border-bottom:1px solid var(--grid)}
+.ctx-row .n{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ctx-row .pc{color:var(--ink-2)}
+.ctx-row.neu .ctx-cl, .ctx-row.neu .n{color:var(--muted)}
+.ctx-hd > *{border-bottom:1px solid var(--border-strong);color:var(--ink-2);font-size:11px;padding-bottom:4px}
+.ctx-hd .n{white-space:nowrap}
+.ctx-gh{grid-column:1 / -1;font-family:var(--f-head);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:9px 0 2px;border-bottom:1px solid var(--grid)}
+.ctx-cl{display:flex;align-items:center;gap:6px;color:var(--ink-2);line-height:1.2;min-width:0}
+.ctx-cl > span{min-width:0}
+.ctx-cl small.lic{font-size:9.5px;padding:0 4px;margin-left:2px}
+.ctx-rul{position:relative;height:22px;min-width:120px}
+.ctx-rul .ctx-ax{position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--axis)}
+.ctx-rul .ctx-dot{position:absolute;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:var(--ink-2);opacity:.55}
+.ctx-rul .ctx-dot.n1{width:8px;height:8px;margin:-4px 0 0 -4px;background:var(--ink);opacity:1;box-shadow:0 0 0 1.5px var(--surface)}
+.ctx-rul.neu .ctx-dot, .ctx-rul.neu .ctx-dot.n1{background:var(--muted)}
+.ctx-rul .ctx-med{position:absolute;top:3px;bottom:3px;width:0;border-left:2px solid var(--muted);opacity:.7}
+.ctx-rul .ctx-lab{position:absolute;top:50%;transform:translateY(-50%);max-width:62%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink);
+  background:var(--surface);padding:0 3px;line-height:15px;border-radius:3px}
+.ctx-rul .ctx-lab.far{right:0;left:auto;max-width:92%;color:var(--ink-2)}
+.ctx-rul.neu .ctx-lab{color:var(--muted)}
+.ctx-sc{height:14px}
+.ctx-sc span{position:absolute;top:0;transform:translateX(-50%);font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ctx-sc span:first-child{transform:none}
+.ctx-sc span:nth-last-child(2){transform:translateX(-100%)}
+.ctx-sc span.u{display:none}
+
+.ctx-zona{margin-top:14px}
+.ctx-zona h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin:0 0 6px}
+.ctx-kv{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.ctx-kv b{color:var(--ink);font-weight:600}
+.ctx-z{font-family:var(--f-head);font-weight:600;font-size:15px;color:var(--ink);border:1.6px solid var(--ink);border-radius:6px;padding:1px 8px;background:repeating-linear-gradient(135deg, var(--ctx-h2) 0 1px, transparent 1px 6px)}
+.ctx-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px}
+.ctx-kpis > div{background:var(--surface);padding:6px 10px;display:flex;flex-direction:column}
+.ctx-kpis span{font-size:11px;color:var(--ink-2)}
+.ctx-kpis b{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.ctx-list{display:grid;grid-template-columns:minmax(180px,260px) minmax(0,1fr);font-size:12px}
+.ctx-list > div{display:contents}
+.ctx-list > div > span{padding:4px 0;border-bottom:1px solid var(--grid)}
+.ctx-list > div > span:first-child{color:var(--ink-2);padding-right:10px}
+.ctx-list b{font-weight:600}
+.ctx-a{color:var(--accent);text-decoration:none;white-space:nowrap}
+.ctx-a:hover{text-decoration:underline}
+.ctx-src{margin-top:12px}
+.ctx-dt{margin-top:10px;font-size:12px}
+.ctx-dt td{vertical-align:middle}
+
+@media (max-width:760px){
+  .ctx-grid{grid-template-columns:minmax(110px,1fr) minmax(0,1.4fr) 38px 38px;column-gap:6px}
+  .ctx-row .pc, .ctx-hd .n:last-child{display:none}
+  .ctx-rul .ctx-lab{max-width:100%}
+  .ctx-list{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
+}
+.ctx-lks{display:inline-block;vertical-align:middle;flex:none;overflow:visible}
+.ctx-band{display:inline-block;width:22px;height:7px;border-radius:4px;background:var(--ink);opacity:.35;vertical-align:middle}
+
+/* ícones minimalistas (Tabler, MIT): círculo = fonte oficial; quadrado = OSM; cinza = tom neutro; cheio = estação */
+.ctx-ic{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;box-sizing:border-box;border:1.3px solid var(--ink);border-radius:50%;background:var(--surface);color:var(--ink);flex:none;vertical-align:middle}
+.ctx-ic svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ctx-ic.sq{border-radius:5px}
+.ctx-ic.neu{border-color:var(--muted);color:var(--muted)}
+.ctx-ic.solid{background:var(--ink);color:var(--surface)}
+.ctx-ic + .ctx-ic{margin-left:3px}
+.lyp-sub .ctx-ic{width:18px;height:18px}

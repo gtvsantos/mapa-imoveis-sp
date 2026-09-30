@@ -1,0 +1,138 @@
+/* ── Radar ITBI: complementos ao molde do Radar de Lajes ── */
+:root{ --pl:#e07b1f; --pl-wash:rgba(224,123,31,.14); --gray-cell:#d9d8d2; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --pl:#f0934a; --pl-wash:rgba(240,147,74,.18); --gray-cell:#3a3a37; } }
+:root[data-theme="dark"]{ --pl:#f0934a; --pl-wash:rgba(240,147,74,.18); --gray-cell:#3a3a37; }
+.app{grid-template-columns:190px minmax(0,1fr)}
+.estrato{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-left:auto;padding:6px 10px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);box-shadow:var(--shadow)}
+.estrato > .lab{font-family:var(--f-head);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.fx{display:flex;flex-wrap:wrap;gap:4px}
+.fx button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);border-radius:999px;padding:3px 10px 3px 7px;font-size:12.5px;cursor:pointer;color:var(--ink-2)}
+.fx button i{width:10px;height:10px;border-radius:50%;display:inline-block;background:var(--c)}
+.fx button[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1px var(--ink)}
+.fx button:hover:not([aria-pressed="true"]){background:var(--accent-wash)}
+.fx button[disabled]{opacity:.45;cursor:not-allowed}
+.rail button{grid-template-columns:1fr}
+.rail button small{grid-column:1}
+.railnote{margin:14px 6px 0;font-size:11px;color:var(--ink-2);line-height:1.4}
+.railnote b{color:var(--ink)}
+.dsel{display:flex;align-items:center;gap:6px;font-family:var(--f-head);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+td.gray, span.gray{color:var(--muted)}
+td.gcell{background:repeating-linear-gradient(45deg,transparent 0 3px,var(--hatch) 3px 4px)}
+.pill{display:inline-block;font-size:11px;padding:0 6px;border-radius:999px;background:var(--surface-2);color:var(--ink-2)}
+.pill.pl{background:var(--pl-wash);color:var(--pl)}
+.pill.ok{background:var(--accent-wash);color:var(--accent)}
+.tipbar{display:flex;align-items:center;gap:8px;font-size:12px;margin:2px 0}
+.tipbar .b{height:10px;border-radius:2px;background:var(--s1)}
+.tipbar .b.qa{background:var(--pl)}
+.tipbar span{min-width:84px;color:var(--ink-2)}
+.tipbar b{font-weight:600;font-variant-numeric:tabular-nums}
+.tipsec h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);margin:10px 0 4px}
+.tipsec h4:first-child{margin-top:0}
+.loading{color:var(--muted);font-size:12px;padding:8px 0}
+.ci{color:var(--muted);font-size:11px}
+.sig{font-weight:600}
+@media (max-width:900px){ .estrato{margin-left:0;width:100%} .three > .card[style]{grid-column:auto!important} }
+/* ── fase 2: menu por grupos, faixa de vista/cor, painel de camadas, aviso ── */
+.railgrp{margin:12px 6px 4px;font-family:var(--f-head);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.railgrp:first-child{margin-top:2px}
+#cityCtrl{flex-wrap:wrap;gap:6px 8px}
+#cityCtrl .custom{font-size:12px;font-style:italic}
+#cityCtrl .seg button{white-space:nowrap}
+.bm-host .lyp{position:absolute;top:10px;right:10px;z-index:4;width:250px;max-height:calc(100% - 118px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border-strong);border-radius:9px;box-shadow:var(--shadow);font-size:12.5px}
+.bm-host .lyp.closed{width:auto}
+.lyp-h{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;font-family:var(--f-head);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.lyp-h .lyp-t{display:inline-flex;align-items:center;gap:6px}
+.lyp-h svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.lyp-h b{font-weight:600;font-size:10.5px;letter-spacing:0;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:8px;background:var(--accent-wash);color:var(--accent)}
+.lyp-h:hover{color:var(--ink)}
+.lyp-h:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:8px}
+.lyp.closed .lyp-b{display:none}
+.lyp-h svg.car{width:14px;height:14px;stroke-width:2;color:var(--muted);transition:transform .15s}
+.lyp:not(.closed) .lyp-h .car{transform:rotate(180deg)}
+.lyp-b{overflow:auto;padding:0 8px 8px}
+.lyp-g h5{margin:8px 0 2px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.lyp-r{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:2px 0}
+.lyp-r label{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink-2);line-height:1.25}
+.lyp-r.on label{color:var(--ink)}
+.lyp-r small{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.lyp-r small.far{color:var(--pl)}
+.lyp .solo{all:unset;cursor:pointer;width:20px;height:20px;border-radius:5px;text-align:center;line-height:20px;color:var(--muted);font-size:13px}
+.lyp .solo:hover,.lyp .solo:focus-visible{background:var(--accent-wash);color:var(--ink)}
+.lyp-subs{display:flex;flex-direction:column;gap:1px;margin:0 0 2px 22px}
+.lyp-sub{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:12px;cursor:pointer}
+.lyp-note{margin:0 0 4px 22px;font-size:10.5px;color:var(--muted);line-height:1.3}
+.bm-host .mtoast{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:5;display:flex;gap:10px;align-items:center;background:var(--ink);color:var(--surface);border-radius:8px;padding:6px 10px;font-size:12.5px;box-shadow:var(--shadow)}
+.bm-host .mtoast button{all:unset;cursor:pointer;text-decoration:underline;font-weight:600}
+.modsec .secbody:empty::after{content:'—';color:var(--muted)}
+.badge-link{all:unset;cursor:pointer;display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;background:var(--pl-wash);color:var(--pl);font-weight:600}
+.badge-link:hover,.badge-link:focus-visible{outline:1px solid var(--pl)}
+.hatch{background:repeating-linear-gradient(45deg,transparent 0 4px,var(--hatch) 4px 5px)}
+.lic{display:inline-block;font-size:10.5px;padding:0 6px;border-radius:4px;border:1px solid var(--border-strong);color:var(--muted);letter-spacing:.02em}
+@media (max-width:900px){ .bm-host .lyp{width:auto;left:8px;right:8px;max-height:45%} .bm-host .lyp.closed{left:auto} }
+body > .mtoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;display:flex;gap:10px;align-items:center;background:var(--ink);color:var(--surface);border-radius:8px;padding:6px 10px;font-size:12.5px;box-shadow:var(--shadow)}
+body > .mtoast button{all:unset;cursor:pointer;text-decoration:underline;font-weight:600}
+
+/* ── 28/09: layout mais limpo ── */
+.citymap .chart.map{height:calc(100vh - 210px);min-height:480px;max-height:none}   /* altura final: sizeCityMap() em app.js */
+.bm-canvas .maplibregl-ctrl-bottom-right{right:10px;bottom:6px}
+.bm-canvas .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group{margin:0 0 6px 0}
+.bm-canvas .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib{margin:0}
+/* o rodapé fica na coluna do conteúdo: o menu lateral é fixo (sticky) e não pode ser coberto por ele */
+footer.dq{grid-column:2}
+@media (max-width:900px){ footer.dq{grid-column:1/-1} }
+/* dica (tooltip) própria para [title] */
+.ttip{position:fixed;z-index:200;max-width:340px;padding:6px 9px;border-radius:7px;background:var(--ink);color:var(--surface);font-size:12px;line-height:1.35;white-space:pre-line;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+[data-tt]{cursor:help}
+button[data-tt],a[data-tt],th.sortable[data-tt],label[data-tt],select[data-tt],input[data-tt],.linkbtn[data-tt],.lyp [data-tt]{cursor:pointer}
+/* tabelas paginadas (sem rolagem interna) */
+.tmore{display:flex;align-items:center;gap:10px;padding:8px 8px 2px;font-size:12px;color:var(--muted)}
+.tmore button{all:unset;cursor:pointer;font-size:12px;font-weight:600;color:var(--accent);padding:2px 8px;border-radius:6px;border:1px solid var(--border-strong)}
+.tmore button:hover,.tmore button:focus-visible{background:var(--accent-wash)}
+table.t.clk:not(.lnk) tbody tr{cursor:pointer}
+/* distritos por tipologia */
+#dtTable td small.dtn{display:block;font-size:10px;color:var(--muted);line-height:1.1}
+#dtTable td{padding-top:4px;padding-bottom:4px}
+#dtTable th i.dtdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+#dtTable tbody tr.city td{background:var(--surface-2)}
+
+/* ── telas estreitas (≤ 900 px): uma coluna; o menu vira uma faixa de abas roláveis; controles e legendas quebram sem vazar ── */
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  #railViews{display:flex;gap:4px;align-items:center}
+  #railViews .railgrp,#railViews .scale,.railnote{display:none}
+  .ctrlrow .seg,#cityCtrl .seg{max-width:100%;overflow-x:auto;scrollbar-width:thin}
+  .legend .scale{flex-wrap:wrap}
+  .legend .scale .g{width:90px}
+  .legend .it{flex-wrap:wrap}
+  #mapCity .bm-ctrls{max-width:calc(100% - 175px)}
+}
+
+/* ── 30/09: cartão do lote sobre o mapa da Cidade ── */
+.bm-host .lotcard{position:absolute;top:44px;left:10px;z-index:5;width:470px;max-width:calc(100% - 20px);max-height:calc(100% - 54px);overflow:auto;display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px;background:var(--surface);border:1px solid var(--border-strong);border-radius:9px;box-shadow:var(--shadow);font-size:12.5px;line-height:1.35}
+.lotcard .lc-x{all:unset;position:absolute;top:6px;right:8px;width:22px;height:22px;line-height:22px;text-align:center;border-radius:5px;cursor:pointer;color:var(--muted);font-size:16px}
+.lotcard .lc-x:hover,.lotcard .lc-x:focus-visible{background:var(--accent-wash);color:var(--ink)}
+.lotcard .lc-h{display:flex;flex-direction:column;gap:2px;padding-right:24px}
+.lotcard .lc-h b{font-size:14px;font-weight:500;color:var(--ink)}
+.lotcard .lc-h span{font-size:12px}
+.lotcard .lc-k{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:12px;color:var(--ink-2)}
+.lotcard .lc-k b{color:var(--ink);font-weight:500;font-family:var(--f-mono)}
+.lotcard .chart{height:170px}
+.lotcard .lc-n{margin:0}
+.lotcard .lc-t table.t{font-size:11.5px}
+.lotcard .lc-t table.t th,.lotcard .lc-t table.t td{padding:4px 6px}
+.lotcard .lc-f{display:flex;justify-content:flex-end}
+@media (max-width:900px){ .bm-host .lotcard{left:8px;right:8px;width:auto;top:44px;max-height:60%} }
+
+/* ── 30/09: busca por rua (no menu; dentro da Central vai para a barra do topo) ── */
+.busca{position:relative;margin:0 6px 10px}
+.busca input[type=search]{width:100%;min-width:0;padding:6px 9px;font-size:13px}
+.busca-l{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;max-height:min(60vh,420px);overflow:auto;background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;box-shadow:var(--shadow);padding:4px}
+.busca-l button{all:unset;display:flex;flex-direction:column;gap:1px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--ink);line-height:1.3}
+.busca-l button b{font-weight:500}
+.busca-l button small{font-size:11px;color:var(--muted);white-space:normal}
+.busca-l button:hover,.busca-l button[aria-selected="true"]{background:var(--accent-wash)}
+.busca-n,.busca-g{padding:6px 8px;font-size:11.5px;color:var(--muted);line-height:1.35}
+.busca-g{border-top:1px solid var(--grid);margin-top:4px;padding-top:8px}
+[data-embed] .busca{margin:0;width:260px;flex:0 1 260px}
+[data-embed] .busca-l{width:360px;left:0;right:auto}
+@media (max-width:900px){ .busca{flex:1 1 180px;margin:0 8px 0 0} .busca-l{width:min(92vw,360px)} [data-embed] .busca{width:auto} }

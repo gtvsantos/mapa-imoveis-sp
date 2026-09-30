@@ -1,0 +1,127 @@
+/* ══ Central — camada final (design system "Central", Page 2) ══════════════════════════════
+   Montada por último (assemble.py), sobrescreve tokens e tipografia do molde do Radar de Lajes
+   sem mexer nas regras de cada vista. Dados (--s1, --pl, rampas) ficam como estão: cor de dado
+   é informação. Interface: branco, hairlines, tinta, Hanken Grotesk + Chivo Mono, sem caixa
+   alta nem sombra. Embutido no dashboard (<html data-embed>), a marca e o menu somem: o
+   cabeçalho e a barra lateral são os da Central. */
+:root{
+  --page:#ffffff; --surface:#ffffff; --surface-2:#fafaf8; --surface-3:#eeeeea;
+  --ink:#0b0b0b; --ink-2:#3a3a36; --muted:#6f6f6a; --grid:#eeeeeb; --axis:#d9d9d4;
+  --border:#e6e6e3; --border-strong:#d9d9d4;
+  --accent:#0b0b0b; --accent-wash:#f4f4f1; --new:#2563eb;
+  --neg:#b3362c; --good-text:#1b7f4d;
+  --shadow:none; --seg-on:#ffffff;
+  --f-head:"Hanken Grotesk","TWK Lausanne",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --f-body:"Hanken Grotesk","TWK Lausanne",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --f-mono:"Chivo Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#0f0f0e; --surface:#151514; --surface-2:#1c1c1a; --surface-3:#262624;
+    --ink:#f4f4f1; --ink-2:#c9c9c3; --muted:#9a9a93; --grid:#262624; --axis:#3a3a36;
+    --border:#2a2a27; --border-strong:#3a3a36;
+    --accent:#f4f4f1; --accent-wash:#1c1c1a; --new:#6b96ff; --neg:#e8776c; --good-text:#5fc48f; --seg-on:#2e2e2b;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0f0f0e; --surface:#151514; --surface-2:#1c1c1a; --surface-3:#262624;
+  --ink:#f4f4f1; --ink-2:#c9c9c3; --muted:#9a9a93; --grid:#262624; --axis:#3a3a36;
+  --border:#2a2a27; --border-strong:#3a3a36;
+  --accent:#f4f4f1; --accent-wash:#1c1c1a; --new:#6b96ff; --neg:#e8776c; --good-text:#5fc48f; --seg-on:#2e2e2b;
+}
+
+/* tipografia: peso 500 no máximo, títulos sem caixa alta, números em mono */
+body{font-size:14px;line-height:20px}
+h1,h2,h3,h4,h5{font-weight:500;letter-spacing:-.01em}
+b,strong{font-weight:500}
+.num,td.n,th.n,.kpi .v,.tt .r b,.tipbar b,.qtag,.ci{font-family:var(--f-mono)}
+.vhead h2{font-size:28px;line-height:31px;font-weight:400;letter-spacing:-.015em}
+.vhead p{font-size:13px;line-height:18px;color:var(--muted)}
+.card > h3,.card h3{font-size:16px;line-height:22px;letter-spacing:-.01em}
+.card .sub{font-size:12.5px;line-height:17px;color:var(--muted)}
+.note{font-size:12px;line-height:16px;color:var(--muted)}
+.asset-head h3{font-size:22px;font-weight:400;letter-spacing:-.015em}
+
+/* rótulos: caixa normal, sem espaçamento, em cinza de rótulo */
+.filters label,.vhead .eyebrow,.ctrlrow .lab,.lists h4,.estrato > .lab,.dsel,.tipsec h4,.railgrp,.lyp-h,.lyp-g h5,
+.ctx-gh,.ctx-zona h4,.fl-sel,.fl-h4,.rz-tlh b,.rz-kv > span,.rz-pg span,.trsel-h .eyebrow,.trh4,.trtl-s .f{
+  text-transform:none;letter-spacing:0;font-family:var(--f-body)}
+.vhead .eyebrow,.trsel-h .eyebrow{font-size:12px;color:var(--muted);margin-bottom:4px}
+.ctrlrow .lab,.estrato > .lab,.dsel,.filters label{font-size:12px;font-weight:400;color:var(--muted)}
+.railgrp,.lyp-g h5{font-size:12px;font-weight:400;color:var(--muted)}
+
+/* superfícies: hairline, raio 8, sem sombra */
+.card{border-radius:8px;padding:16px 18px}
+.kpis{border-radius:8px}
+.kpi{padding:12px 14px}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .v{font-size:20px;font-weight:400;letter-spacing:-.01em}
+.kpi .d{font-size:12px;color:var(--muted)}
+.bm-host{border-radius:6px}
+.bm-grp,.bm-canvas .maplibregl-ctrl-group{box-shadow:none;background:var(--surface)}
+.bm-host .lyp{border-radius:8px;box-shadow:none;border-color:var(--border)}
+.lyp-h b{background:var(--new);color:#fff;font-family:var(--f-mono)}
+
+/* tabelas: cabeçalho em rótulo, hairlines leves, seleção em tinta */
+table.t th{font-family:var(--f-body);font-weight:400;font-size:12px;letter-spacing:0;color:var(--muted);border-bottom:1px solid var(--border)}
+table.t td{border-bottom:1px solid var(--grid)}
+table.t th .ar{color:var(--ink)}
+table.t tbody tr:hover td{background:var(--surface-2)}
+table.t tr.sel td{background:var(--surface-3)}
+table.t tr.sel td:first-child{box-shadow:inset 2px 0 0 var(--ink)}
+
+/* controles segmentados = SELETOR da Central: trilho cinza com borda, opção ativa em
+   "pastilha" branca com contorno. Fica claro que é um menu de escolha (e não abas de página). */
+.seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--border);border-radius:7px;background:var(--accent-wash);overflow:visible}
+.seg button{border:0;border-radius:5px;background:transparent;padding:4px 11px;font-size:13px;line-height:18px;color:var(--muted);white-space:nowrap;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--seg-on);color:var(--ink);font-weight:500;box-shadow:0 0 0 1px var(--border-strong)}
+.seg button:hover:not([aria-pressed="true"]):not([disabled]){background:var(--surface-3);color:var(--ink)}
+.seg button[disabled]{opacity:.45;cursor:not-allowed}
+/* divisória vertical entre grupos de seletores que mexem em coisas diferentes */
+.vsep{display:inline-block;align-self:center;width:1px;height:24px;margin:0 4px;background:var(--muted);opacity:.5;flex:none}
+select,input[type=search],input[type=text]{border-color:var(--border-strong);border-radius:6px;font-size:13px}
+.fx{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px;padding:2px;border:1px solid var(--border);border-radius:7px;background:var(--accent-wash)}
+.fx button{border:0;border-radius:5px;background:transparent;padding:4px 10px 4px 8px;font-size:12.5px;line-height:18px;color:var(--muted);box-shadow:none}
+.fx button i{width:8px;height:8px}
+.fx button[aria-pressed="true"]{background:var(--seg-on);color:var(--ink);font-weight:500;box-shadow:0 0 0 1px var(--border-strong)}
+.fx button:hover:not([aria-pressed="true"]):not([disabled]){background:var(--surface-3);color:var(--ink)}
+.tmore button{color:var(--ink);font-weight:500}
+.linkbtn:hover{color:var(--ink);text-decoration-color:var(--ink)}
+:focus-visible{outline:2px solid var(--new);outline-offset:2px}
+
+/* faixa do estrato: sem caixa — é a barra de ferramentas da página */
+.estrato{border:0;border-radius:0;background:transparent;box-shadow:none;padding:0;gap:10px 12px;align-items:center}
+.estrato > .lab{display:none}
+
+/* faixa acima do mapa da Cidade: [Vista ▸ seletor] | [Cor do distrito ▸ seletores] */
+#cityCtrl{gap:10px 12px}
+#cityCtrl .cgrp{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+#cityCtrl .lab{margin-right:2px}
+
+/* menu próprio (só fora da Central) */
+.rail button span{font-family:var(--f-body);font-size:14px;font-weight:400}
+.rail button small{font-size:12px;color:var(--muted)}
+.rail button:hover{background:var(--surface-3)}
+.rail button[aria-current="page"]{background:var(--surface-3);box-shadow:none}
+.rail button[aria-current="page"] span{font-weight:500}
+.brand h1{font-size:15px;font-weight:500;letter-spacing:-.01em}
+.brand .mark{width:14px;height:14px;display:block;background:var(--ink);border-radius:3px}
+.brand .mark i{display:none}
+.top{background:var(--page);backdrop-filter:none;-webkit-backdrop-filter:none;padding:12px 32px}
+
+/* ── embutido na Central ─────────────────────────────── */
+[data-embed] .app{grid-template-columns:minmax(0,1fr)}
+[data-embed] .rail,[data-embed] .top .brand{display:none}
+[data-embed] .top{padding:14px 32px 12px}
+[data-embed] .estrato{margin-left:0}
+[data-embed] main{padding-block:24px 32px;padding-inline:32px}
+[data-embed] footer.dq{grid-column:1/-1;padding-inline:32px}
+[data-embed] .citymap .chart.map{min-height:480px}
+/* cartão do lote e busca por rua (30/09): superfícies da Central */
+.lotcard{border-radius:8px;box-shadow:none;border-color:var(--border)}
+.lc-btn{background:var(--ink);color:var(--surface);border:0;border-radius:6px;padding:6px 12px;font-size:13px;font-weight:500;cursor:pointer}
+.lc-btn:hover{opacity:.9}
+.busca input[type=search]{border-radius:7px}
+.busca-l{border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.10)}
+[data-embed] .busca{margin:0 12px 0 0}
