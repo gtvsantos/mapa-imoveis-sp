@@ -24,6 +24,7 @@ Lógica:
     python3 atualizar_dados.py --anos 2025 2026    # só estes anos
     python3 atualizar_dados.py --so-baixar         # baixa e para
     python3 atualizar_dados.py --so-site           # só remonta o site (build_site.py)
+    python3 atualizar_dados.py --publicar          # ao final, git add/commit/push do site (o GitHub Pages republica)
     python3 atualizar_dados.py --force             # rebaixa tudo e roda tudo
     python3 atualizar_dados.py --iptu              # também procura exercício novo do IPTU no GeoSampa
 
@@ -99,6 +100,22 @@ class Log:
 
 
 # ───────────────────────────── HTTP ─────────────────────────────
+def _instalar_ssl():
+    """Certificados: o Python do python.org vem sem a cadeia do sistema (erro CERTIFICATE_VERIFY_FAILED). Usa o
+    pacote certifi quando existir; senão, o padrão do interpretador. Com proxy corporativo que reassina TLS, rode
+    com o python3 do Miniforge (que enxerga a cadeia) ou exporte SSL_CERT_FILE apontando para o CA do proxy."""
+    import ssl
+    try:
+        import certifi
+        ctx = ssl.create_default_context(cafile=certifi.where())
+    except Exception:   # noqa: BLE001
+        ctx = ssl.create_default_context()
+    urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx)))
+
+
+_instalar_ssl()
+
+
 def _req(url: str, metodo="GET", dados: bytes | None = None, extra: dict | None = None) -> urllib.request.Request:
     h = {"User-Agent": UA, "Accept": "*/*", "Accept-Language": "pt-BR,pt;q=0.9"}
     if extra:
@@ -458,6 +475,35 @@ def tamanho_site() -> str:
 
 
 # ───────────────────────────── main ─────────────────────────────
+def publicar(log) -> bool:
+    """git add / commit / push na pasta do site — só se houver mudança. O GitHub Pages (branch main, raiz)
+    republica sozinho em 1–2 minutos. Nunca faz force-push nem mexe em outro repositório."""
+    def git(*args):
+        r = subprocess.run(["git", *args], cwd=SITE, capture_output=True, text=True)
+        if r.returncode != 0:
+            raise RuntimeError(f"git {' '.join(args)}: {(r.stderr or r.stdout).strip()}")
+        return r.stdout
+    if not (SITE / ".git").exists():
+        log("publicar: a pasta do site não é um repositório git (git init + remoto antes)"); return False
+    try:
+        git("add", "-A")
+        if not git("status", "--porcelain").strip():
+            log("publicar: nada mudou desde o último commit; nada a enviar"); return True
+        meta = {}
+        try:
+            meta = json.loads((SITE / "data.json").read_text()).get("meta", {})
+        except Exception:   # noqa: BLE001
+            pass
+        msg = f"Dados atualizados: ITBI até {meta.get('last_date', '?')} (séries até {meta.get('last_q', '?')}; montagem {meta.get('built', '?')})"
+        git("commit", "-q", "-m", msg)
+        branch = git("rev-parse", "--abbrev-ref", "HEAD").strip()
+        git("push", "origin", branch)
+        log(f"publicar: commit + push em {branch} — \"{msg}\"; o GitHub Pages republica em ~1–2 min")
+        return True
+    except RuntimeError as e:
+        log(f"publicar: FALHOU — {e}"); return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Atualiza os dados públicos (ITBI) e regenera o site.")
     ap.add_argument("--itbi-dir", default=os.environ.get("ITBI_DIR", str(ITBI_PADRAO)),
@@ -471,6 +517,7 @@ def main() -> int:
     ap.add_argument("--so-site", action="store_true", help="só remonta o site (build_site.py)")
     ap.add_argument("--iptu", action="store_true", help="também procura exercício novo do IPTU no GeoSampa")
     ap.add_argument("--anos", nargs="*", type=int, default=None, help="limita aos anos indicados (ex.: --anos 2025 2026)")
+    ap.add_argument("--publicar", action="store_true", help="ao final, git add/commit/push na pasta do site (só se algo mudou); o GitHub Pages republica sozinho")
     a = ap.parse_args()
 
     itbi = Path(a.itbi_dir).expanduser().resolve()
@@ -488,8 +535,11 @@ def main() -> int:
     if a.so_site:
         if a.dry_run:
             log("faria: " + " ".join(build_site)); return 0
-        rodar(py, SITE / "build_site.py", ["--proto", str(proto)], log, tempos)
-        log(f"site: {tamanho_site()} · {time.time() - t_ini:.0f} s"); return 0
+        ok = rodar(py, SITE / "build_site.py", ["--proto", str(proto)], log, tempos, opcional=True)
+        log(f"site: {tamanho_site()} · {time.time() - t_ini:.0f} s")
+        if a.publicar and ok:
+            return 0 if publicar(log) else 1
+        return 0 if ok else 1
 
     # 1. listagem
     pagina, itens = descobrir_pagina([a.pagina] if a.pagina else PAGINAS, log)
@@ -558,6 +608,8 @@ def main() -> int:
     if not novos and not iptu_lista_novos and not a.force:
         log(f"sem novidade · {time.time() - t_ini:.0f} s")
         salvar_manifesto(manifesto_p, manifesto, pagina)
+        if a.publicar:   # ainda pode haver mudança de código/montagem para publicar
+            return 0 if publicar(log) else 1
         return 0
 
     # 4. downloads
@@ -605,6 +657,8 @@ def main() -> int:
         log(f"  {k:<22} {v:7.0f} s")
     log(f"  site: {tamanho_site()} · build_site {'ok' if ok_site else 'FALHOU (ver acima)'}")
     log(f"  total: {time.time() - t_ini:.0f} s")
+    if a.publicar and ok_site:
+        return 0 if publicar(log) else 1
     return 0 if ok_site else 1
 
 

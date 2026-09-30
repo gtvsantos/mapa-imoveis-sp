@@ -78,13 +78,28 @@ python3 build_site.py --exclude m_x   # deixa outro módulo fora (o licenciado f
 
 ## Atualizar os dados (`atualizar_dados.py`)
 
+**Rotina mensal (um comando):** a Secretaria da Fazenda republica o arquivo do ano corrente perto do fim de cada
+mês. Depois disso, na pasta `mapa-imoveis-sp/`:
+
+```bash
+python3 atualizar_dados.py --publicar
+```
+
+Isso baixa o que mudou, roda a cadeia (~10 min), remonta o site, faz `git commit` + `git push` e o GitHub Pages
+republica sozinho em 1–2 minutos em <https://gtvsantos.github.io/mapa-imoveis-sp/>. Sem novidade na Prefeitura, o
+script só avisa e sai (e, com `--publicar`, ainda envia qualquer mudança de código já montada). Para conferir antes:
+
 ```bash
 python3 atualizar_dados.py --dry-run          # lista anos/URLs detectados e o que faria; não baixa nada
-python3 atualizar_dados.py                    # baixa o que mudou, roda a cadeia, remonta o site
+python3 atualizar_dados.py --dry-run --head   # idem, conferindo tamanho/last-modified no servidor
+python3 atualizar_dados.py                    # baixa o que mudou, roda a cadeia, remonta o site (sem publicar)
 python3 atualizar_dados.py --anos 2025 2026   # limita aos anos
 python3 atualizar_dados.py --iptu             # também procura exercício novo do IPTU no GeoSampa
 python3 atualizar_dados.py --so-baixar | --so-site | --force
 ```
+
+Só mudou código (em `proto/src`) e quer publicar sem mexer nos dados: `python3 atualizar_dados.py --so-site --publicar`.
+Publicar na mão equivale a `git add -A && git commit -m "..." && git push` nesta pasta.
 
 O que faz: (1) lê a página de listagem da Secretaria da Fazenda e extrai os `.xlsx` de ITBI (um por ano; o do ano
 corrente traz só a data de geração no nome — gerado em janeiro/fevereiro conta como fechamento do ano anterior);
@@ -95,7 +110,10 @@ a Prefeitura regera os arquivos anuais); (4) roda a cadeia — `01_stage_raw.py 
 `build_terrenos.py` (opcionais) → `build_site.py`; (5) registra em `atualizacoes.log`. Sem novidade, só informa.
 
 Interpretador da cadeia: `python3.12` no PATH, ou `/Library/Frameworks/Python.framework/Versions/3.12/bin/python3`,
-ou o que rodou o script (`--python` força). Precisa de `duckdb pandas pyarrow shapely openpyxl`.
+ou o que rodou o script (`--python` força). Precisa de `duckdb pandas pyarrow shapely openpyxl`. O próprio
+`atualizar_dados.py` roda com qualquer `python3` (só biblioteca padrão); se aparecer `CERTIFICATE_VERIFY_FAILED`,
+use o `python3` do Miniforge (que enxerga os certificados do sistema) ou `pip install certifi` no interpretador usado.
+O Postgres local não é mais necessário para o build (snapshot dos distritos em `research/stage/geo_distritos.json`).
 
 ## Insumos e origem
 
