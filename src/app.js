@@ -1,7 +1,7 @@
 /* ════════ Radar ITBI · lógica das abas (Cidade · Quadrante · Distrito · Prédio) ════════ */
 /* erros de execução ficam também em <html data-err> (visível a ferramentas de teste) */
 const logErr = m => { const r = document.documentElement; r.dataset.err = ((r.dataset.err || '') + ' || ' + m).slice(-4000); };
-window.addEventListener('error', e => logErr(e.message + ' @' + e.lineno + ':' + e.colno));
+window.addEventListener('error', e => { if (!/ResizeObserver loop/.test(e.message || '')) logErr(e.message + ' @' + e.lineno + ':' + e.colno); });   // o aviso benigno do ResizeObserver (redimensionar o mapa) não é erro
 window.addEventListener('unhandledrejection', e => logErr('promise: ' + (e.reason && e.reason.stack || e.reason)));
 const M = D.meta, Q = M.q, NQ = Q.length, LQ = NQ - 1, QF = M.q_from_full, QR = M.q_from_recent, MIN = M.min_n;
 const FX = M.faixas, ANOS = M.anos, TC = M.tipo_code, MOT = M.motivos;
@@ -219,7 +219,7 @@ function syncUrl() {
   if (location.hash !== h) { if (navPush) history.pushState(null, '', h); else history.replaceState(null, '', h); }
   lastHash = location.hash; navPush = false;
 }
-const onNav = () => { if (location.hash === lastHash) return; stateFromHash(); render(); };
+const onNav = () => { if (location.hash === lastHash) return; const antes = S.view; stateFromHash(); if (S.view !== antes) collapseMaps(); render(); };
 window.addEventListener('popstate', onNav);
 window.addEventListener('hashchange', onNav);
 /* navegação (drill-down, clique no mapa ou na tabela) empilha no histórico: o Voltar desfaz.
@@ -227,6 +227,7 @@ window.addEventListener('hashchange', onNav);
 function setView(v, ids, opt) {
   if (DISABLED.has(v)) { toast('Esta aba está desligada por enquanto.'); return; }
   const troca = v !== S.view;
+  if (troca) collapseMaps();   // mapa expandido não pode sobreviver à troca de página (fundo escurecido ficava para trás)
   S.view = v; if (ids) Object.assign(S, ids); navPush = true; render();
   // rola ao topo só quando a PÁGINA muda (30/09): clicar num lote ou distrito no mapa da Cidade não mexe na rolagem
   if (troca && !(opt && opt.keep)) window.scrollTo({top: 0});
@@ -1317,7 +1318,7 @@ window.RADAR = {
   chart, base, ax, tip, table, kpi, nBadge, priceCell, dvCell, axM2, fxColors, fxColor, priceColor, varColor, heatColor,
   dname, skey, sLabel, ser, st, delta, geoStats, qAxis,
   TIPOS, GRP, GRP_LB, GRP_LB1, BASE, BASE_LB, DIMS_T, grpOf, baseOf, FXD, fxLab, PU, fPrice, rsOf, areaOf, lotCard, lotCardClose, ruasBusca, ruaIr,
-  createBaseMap, wireMap, upsertSrc, addLayerOnce, visL, firstSymbol, rafThrottle, putImage, diamondImg, EMPTY_FC, lotFeature, decodeRings, haversine, BMAPS,
+  createBaseMap, wireMap, upsertSrc, addLayerOnce, visL, firstSymbol, rafThrottle, putImage, diamondImg, EMPTY_FC, lotFeature, decodeRings, haversine, BMAPS, collapseMaps,
   fetchDist, loadJSON, safe, logErr, render, setView, openDist, openLot, camHas, setLayer, setMetric, toast, syncUrl, renderSections, badgesHtml, LAYER_GROUPS,
   renderLayerPanel, renderCityLegend, applyCity, normTxt,
   registerView, registerSection, registerBadge, registerMetric, registerLayer, registerPreset, registerParam, viewDef, viewOn, DISABLED,

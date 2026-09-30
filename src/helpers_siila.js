@@ -65,7 +65,11 @@ const axM2 = v => Math.abs(v) >= 1e6 ? nf1.format(v / 1e6) + ' mi' : Math.abs(v)
 /* opts: sort {k, d} · sel(r) linha marcada · rowAttr(r) · onRow(r, ev) · rowLink (só o link/botão da linha navega, não a linha toda)
    · pin(r) linhas fixas no topo em qualquer ordenação (número = ordem entre elas) · page N (mostra N linhas + "mostrar mais", sem rolagem interna) · pageKey
    (quando muda, volta à 1ª página). Ordenar volta à 1ª página e ao topo da tabela. */
+/* 30/09: toda tabela mostra TODAS as linhas (pedido do usuário; substitui a paginação de 28/09). `opts.page` dos
+   chamadores é aceito e ignorado — para voltar a paginar, basta TABLE_SHOW_ALL = false. */
+const TABLE_SHOW_ALL = true;
 function table(el, id, cols, rows, opts = {}) {
+  if (TABLE_SHOW_ALL && opts.page) opts = Object.assign({}, opts, {page: 0});
   const st = S.sorts[id] || opts.sort || null;
   let rs = rows.slice();
   if (st) {

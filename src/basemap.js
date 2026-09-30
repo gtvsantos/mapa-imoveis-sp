@@ -59,6 +59,9 @@ const popupPredioOsm = p => `<div class="bm-pop"><strong>Prédio (OpenStreetMap)
 function rafThrottle(fn) { let raf = 0, last; return (...a) => { last = a; if (!raf) raf = requestAnimationFrame(() => { raf = 0; fn(...last); }); }; }
 
 const BMAPS = [];
+/* recolhe qualquer mapa expandido (30/09): ao trocar de página o fundo escurecido ficava para trás e a página nova
+   aparecia desfocada por baixo dele */
+function collapseMaps() { BMAPS.forEach(H => { if (H.expanded && H.expand) H.expand(false); }); }
 /* tela cheia do navegador (F11 / API Fullscreen): o canvas precisa ser redimensionado (30/09) */
 document.addEventListener('fullscreenchange', () => BMAPS.forEach(H => H.map && H.map.resize()));
 function createBaseMap(host, opts) {
@@ -239,6 +242,7 @@ function createBaseMap(host, opts) {
   new ResizeObserver(() => { map.resize(); H.sized = cv.clientWidth > 50 && cv.clientHeight > 50; flush(); }).observe(cv);
 
   H.fit = req => { H.pending = req; flush(); };
+  H.expand = expand;
   H.setHighlight = pids => { H.hl = new Set(pids); markHl(H.predData); const s = H.ready && map.getSource('bm-pred'); if (s) s.setData(H.predData); };
   H.onTheme = () => { if (H.basemap === 'auto') setStyle(); else applyToggles(); };
   H.hit = (ids, pt) => { ids = ids.filter(id => map.getLayer(id) && map.getLayoutProperty(id, 'visibility') !== 'none'); return ids.length ? map.queryRenderedFeatures(pt, {layers: ids}) : []; };
