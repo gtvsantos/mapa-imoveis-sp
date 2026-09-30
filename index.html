@@ -398,6 +398,16 @@ table.t.clk:not(.lnk) tbody tr{cursor:pointer}
 [data-embed] .busca{margin:0;width:260px;flex:0 1 260px}
 [data-embed] .busca-l{width:360px;left:0;right:auto}
 @media (max-width:900px){ .busca{flex:1 1 180px;margin:0 8px 0 0} .busca-l{width:min(92vw,360px)} [data-embed] .busca{width:auto} }
+
+/* ── 30/09 (3ª rodada): toda tabela tem altura máxima fixa e rola por dentro (todas as linhas continuam lá; o cabeçalho
+   fica fixo no topo). A barra de rolagem é desenhada sempre (no macOS a nativa some quando parada). ── */
+.tablewrap{max-height:min(420px,55vh);overflow:auto;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--axis) transparent}
+.tablewrap.tall{max-height:min(560px,70vh)}
+.tablewrap::-webkit-scrollbar{width:9px;height:9px}
+.tablewrap::-webkit-scrollbar-track{background:transparent}
+.tablewrap::-webkit-scrollbar-thumb{background:var(--axis);border-radius:5px;border:2px solid var(--surface)}
+.tablewrap::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+.lotcard .lc-t{max-height:none}   /* no cartão do lote a altura vem da coluna flex (min 150 px) */
 /* ── módulo Aluguel e yield: violeta de um só matiz (mesmos tons de R.VIOLET), texto sempre em tinta ── */
 :root{ --al-1:#9895f0; --al-2:#7f79e2; --al-3:#685dcf; --al-4:#5343b7; --al-5:#3f2e95; --al-6:#2c1f6e; --al-wash:rgba(104,93,207,.14); }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --al-1:#564cae; --al-2:#6b63ce; --al-3:#827ce6; --al-4:#9b99f3; --al-5:#b5b5fc; --al-6:#d2d3ff; --al-wash:rgba(130,124,230,.18); } }
@@ -2334,7 +2344,7 @@ function renderPHist(F, l, ks, lotTipo, id = 'pHist', mini = false) {
   c.setOption(Object.assign(base(), {grid: mini ? {left: 48, right: 10, top: 8, bottom: 24} : {left: 56, right: 14, top: 12, bottom: 30},
     xAxis: ax({type: 'time', minInterval: 365.25 * 864e5, axisLabel: {color: css('--muted'), fontSize: 10, formatter: '{yyyy}', hideOverlap: true}}),
     yAxis: ax({type: 'value', scale: true, axisLabel: {color: css('--muted'), fontSize: 10, formatter: v => nf0.format(v)}}),
-    tooltip: Object.assign(base().tooltip, {trigger: 'item', formatter: p => { if (p.seriesName !== 'vendas') return p.seriesName === 'distrito' ? tip('Distrito · mesmo estrato', [['Mediana 12 m', nf0.format(p.data[1])]]) : '';
+    tooltip: Object.assign(base().tooltip, {trigger: 'item', formatter: p => { if (p.seriesName !== 'vendas') return p.seriesName === 'distrito' ? tip(`${dname(S.lotCd)} · mesmo estrato`, [['Mediana 12 m', nf0.format(p.data[1])]].concat(typeof band !== 'undefined' && band[p.dataIndex] ? [['Metade central (25%–75%)', `${nf0.format(band[p.dataIndex][1])} – ${nf0.format(band[p.dataIndex][2])}`]] : []), 'comparação com o distrito do lote') : '';
       const k = p.data.k; return tip(`${fDate(d.d[k])} · ${d.cp[k] || 'unidade'}`, [[PU(lotTipo), fPrice(p.data.value[1], lotTipo)], ['Valor (100%)', fR(d.v100[k])], [BASE[lotTipo] === 'm2t' ? 'Área do terreno' : 'Área construída', areaOf(d, k) ? nf0.format(areaOf(d, k)) + ' m²' : '—'],
         ['Faixa', [fxOf(d, k, 'area'), fxOf(d, k, 'padrao') ? 'padrão ' + fxOf(d, k, 'padrao') : null, fxOf(d, k, 'idade') ? fxOf(d, k, 'idade') + ' anos' : null, fxOf(d, k, 'quartos') ? fxOf(d, k, 'quartos') + ' dorm. (est.)' : null].filter(Boolean).join(' · ')],
         ['Status', d.ok[k] ? 'entra no preço' : 'fora: ' + MOT[d.mo[k]]]]); }}),
@@ -2346,8 +2356,12 @@ function renderPHist(F, l, ks, lotTipo, id = 'pHist', mini = false) {
       {name: 'vendas', type: 'scatter', data: pts, symbolSize: mini ? 6 : 7, z: 3},
     ]}), true);
   if (mini) return;
-  $('pHistSub').textContent = `Cada ponto é um negócio (${BASE_LB[baseOf(lotTipo)] || PU(lotTipo)}). Cor = ${DIMLB[dim]}; vazado = fora do preço. Tracejado e faixa = mediana e IQR do distrito, ${(GRP_LB1[lotTipo] || TIPO_LB[lotTipo] || '').toLowerCase()} · ${fxSel === '*' ? 'todas as faixas' : fxLab(dim, fxSel, lotTipo)}.`;
-  $('pHistLeg').innerHTML = fxs.map((f, i) => `<span class="it"><i class="dot" style="background:${cols[i]}"></i>${esc(fxLab(dim, f, lotTipo))}</span>`).join('') + `<span class="it"><i class="dot" style="box-shadow:inset 0 0 0 1px var(--muted)"></i>fora do preço</span>`;
+  const dn = dname(S.lotCd), est = `${(GRP_LB1[lotTipo] || TIPO_LB[lotTipo] || '').toLowerCase()} · ${fxSel === '*' ? 'todas as faixas' : fxLab(dim, fxSel, lotTipo)}`;
+  $('pHistSub').textContent = `Cada ponto é uma venda deste lote, em ${BASE_LB[baseOf(lotTipo)] || PU(lotTipo)}; cor = ${DIMLB[dim]}; vazado = fora do cálculo de preço. Comparação com o distrito (${dn}), ${est}: tracejado = mediana dos últimos 12 meses; faixa = metade central das vendas (do percentil 25 ao 75).` +
+    (fxSel === '*' ? ' Com "todas as faixas", tamanhos diferentes entram juntos: escolha no topo a faixa do prédio para comparar igual com igual.' : '');
+  $('pHistLeg').innerHTML = fxs.map((f, i) => `<span class="it"><i class="dot" style="background:${cols[i]}"></i>${esc(fxLab(dim, f, lotTipo))}</span>`).join('') + `<span class="it"><i class="dot" style="box-shadow:inset 0 0 0 1px var(--muted)"></i>fora do preço</span>` +
+    `<span class="it"><i class="lk" style="background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)"></i>mediana de ${esc(dn)} (12 m)</span>` +
+    `<span class="it"><i class="dot" style="border-radius:2px;width:14px;background:var(--s1);opacity:.3"></i>metade central das vendas de ${esc(dn)} (25%–75%)</span>`;
 }
 const Q0Y = i => 2006 + Math.floor(i / 4);
 function renderTip(l, F, ks) {
@@ -2614,7 +2628,20 @@ function sizeCityMap() {
   const h = Math.round(innerHeight - (r.top + scrollY) - (leg ? leg.offsetHeight : 0) - 34);
   const hh = Math.max(480, h) + 'px'; if (el.style.height !== hh) el.style.height = hh;
 }
-window.addEventListener('resize', rafThrottle(sizeCityMap));
+/* redimensionar a janela OU mudar o zoom do navegador (Ctrl +/−) muda o viewport em px CSS: recalcula a altura do mapa da
+   Cidade, redimensiona todos os mapas (canvas) e todos os gráficos ECharts. O zoom é observado pela troca do devicePixelRatio. */
+function onViewportChange() {
+  sizeCityMap();
+  BMAPS.forEach(H => { try { if (H.map) H.map.resize(); } catch (e) { /* mapa já descartado */ } });
+  Object.values(CH).forEach(c => { try { if (c && !c.isDisposed()) c.resize(); } catch (e) { /* gráfico já descartado */ } });
+}
+const onViewportChangeT = rafThrottle(onViewportChange);
+window.addEventListener('resize', onViewportChangeT);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', onViewportChangeT);
+(function watchZoom() {
+  const mq = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+  mq.addEventListener('change', () => { onViewportChange(); setTimeout(onViewportChange, 150); watchZoom(); }, {once: true});
+})();
 
 /* ── rodapé: qualidade e regras ───────────────────────── */
 function renderFooter() {

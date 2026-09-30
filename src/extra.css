@@ -140,3 +140,13 @@ table.t.clk:not(.lnk) tbody tr{cursor:pointer}
 [data-embed] .busca{margin:0;width:260px;flex:0 1 260px}
 [data-embed] .busca-l{width:360px;left:0;right:auto}
 @media (max-width:900px){ .busca{flex:1 1 180px;margin:0 8px 0 0} .busca-l{width:min(92vw,360px)} [data-embed] .busca{width:auto} }
+
+/* ── 30/09 (3ª rodada): toda tabela tem altura máxima fixa e rola por dentro (todas as linhas continuam lá; o cabeçalho
+   fica fixo no topo). A barra de rolagem é desenhada sempre (no macOS a nativa some quando parada). ── */
+.tablewrap{max-height:min(420px,55vh);overflow:auto;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--axis) transparent}
+.tablewrap.tall{max-height:min(560px,70vh)}
+.tablewrap::-webkit-scrollbar{width:9px;height:9px}
+.tablewrap::-webkit-scrollbar-track{background:transparent}
+.tablewrap::-webkit-scrollbar-thumb{background:var(--axis);border-radius:5px;border:2px solid var(--surface)}
+.tablewrap::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+.lotcard .lc-t{max-height:none}   /* no cartão do lote a altura vem da coluna flex (min 150 px) */
