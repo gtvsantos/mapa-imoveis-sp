@@ -52,3 +52,10 @@ ele mandar. Atualização mensal pelo `atualizar_dados.py` na máquina de origem
 manual até haver cache dos insumos, ~2 GB, e dos parquets intermediários da pesquisa). Cada nova geração dos xlsx da
 Prefeitura é arquivada antes de sobrescrever (I-026). O build de agregados dispensa o banco local desde 30/09 (snapshot
 dos distritos). (I-040, I-041.)
+
+## S-005 · Filtro de período (30/09/2026)
+
+Controle "Período" no cabeçalho: data inicial até final, vazio = tudo (`?per=` na URL). Filtra os negócios um a um
+(lotes do mapa, cartão do lote, página do lote, comparáveis, tabela de lotes do distrito) e recorta os gráficos por
+trimestre. As cores e KPIs "12 meses" dos distritos não mudam com o período: são os últimos 12 meses da base, e a
+legenda avisa. (I-044.)

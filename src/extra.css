@@ -150,3 +150,12 @@ table.t.clk:not(.lnk) tbody tr{cursor:pointer}
 .tablewrap::-webkit-scrollbar-thumb{background:var(--axis);border-radius:5px;border:2px solid var(--surface)}
 .tablewrap::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 .lotcard .lc-t{max-height:none}   /* no cartão do lote a altura vem da coluna flex (min 150 px) */
+
+/* ── 30/09 (I-044): período (data inicial até final) no cabeçalho ── */
+.periodo{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.periodo .lab{font-size:12px;color:var(--muted)}
+.periodo input[type=date]{border:1px solid var(--border-strong);border-radius:6px;padding:3px 6px;font-size:12.5px;line-height:18px;background:var(--surface);color:var(--ink);font-family:var(--f-mono);min-width:0;width:140px}
+.periodo.on input[type=date]{border-color:var(--ink)}
+.periodo input[type=date]::-webkit-calendar-picker-indicator{opacity:.6;cursor:pointer}
+.periodo .linkbtn{font-size:12px}
+@media (max-width:900px){ .periodo{flex-wrap:wrap} }

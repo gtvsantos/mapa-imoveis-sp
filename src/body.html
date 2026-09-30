@@ -15,6 +15,14 @@
         <button type="button" data-d="quartos" title="Estimado dentro do prédio pelos anúncios QuintoAndar (acerto 73–87%); só apartamentos">Quartos</button>
       </div>
       <div class="fx" id="fxChips" role="group" aria-label="Faixa"></div>
+      <span class="vsep" aria-hidden="true"></span>
+      <div class="periodo" id="periodo" role="group" aria-label="Período: data inicial até final (padrão: tudo)" title="Filtra os negócios (lotes do mapa, cartão do lote, página do lote, comparáveis, tabelas) e recorta os gráficos. Vazio = todo o período. As cores dos distritos continuam sendo os últimos 12 meses da base.">
+        <span class="lab">Período</span>
+        <input type="date" id="perIni" min="2006-01-01" aria-label="Data inicial" placeholder="início">
+        <span class="muted">até</span>
+        <input type="date" id="perFim" min="2006-01-01" aria-label="Data final" placeholder="fim">
+        <button type="button" class="linkbtn" id="perTudo" hidden title="Voltar a todo o período">tudo</button>
+      </div>
     </div>
   </header>
 

@@ -9,7 +9,8 @@ Apartamentos · Casas e residências · Terrenos · Lojas, escritórios e comerc
 
 O preço muda de base com o tipo: R$/m² de área construída (apartamentos, casas, comerciais, galpões), R$/m² de área
 do terreno (terrenos) e R$ por unidade (vagas). Há **busca por rua** (índice próprio, sem serviço externo; OpenStreetMap
-só como segundo recurso) e, ao clicar num lote do mapa, um **cartão** com o gráfico das vendas do lote no tempo, a
+só como segundo recurso), um **filtro de período** (data inicial até final; vazio = tudo) que filtra os negócios e
+recorta os gráficos, e, ao clicar num lote do mapa, um **cartão** com o gráfico das vendas do lote no tempo, a
 tabela dos negócios e o atalho para a página do lote.
 
 Páginas: **Cidade** (mapa dos distritos e dos lotes com venda, trajetória do R$/m² por faixa, vendas por trimestre),

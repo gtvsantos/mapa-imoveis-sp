@@ -73,11 +73,57 @@ const ORANGE = {light: ['#f7d3b3', '#f0b079', '#e8914a', '#e07b1f', '#b8621a', '
 /* o que muda a resposta vai na URL (#/vista/id?parâmetros); o localStorage guarda só a última sessão */
 const S = {view: 'cidade', tipo: 'apto', dim: 'area', fx: '*', met: 'preco', cd: '62', lot: null, lotCd: null, years: 10,
   cityRef: true, radius: 1, compYears: 2, qmin: 30, qCI: true, qLab: true, qSel: null, bldOnlyStr: true, sorts: {}, pages: {}, dtMet: 'm',
-  cam: null, soloPrev: null, p: {}};
+  cam: null, soloPrev: null, p: {}, d0: null, d1: null};
 const PREF = ['tipo', 'dim', 'fx', 'met', 'cd', 'lot', 'lotCd', 'years', 'radius', 'compYears', 'qmin'];
 function loadPrefs() { try { const s = JSON.parse(localStorage.getItem('radarITBI') || '{}'); PREF.forEach(k => { if (s[k] != null) S[k] = s[k]; }); if (Array.isArray(s.cam)) S.cam = new Set(s.cam); } catch (e) {} }
 function save() { try { const o = {}; PREF.forEach(k => { o[k] = S[k]; }); o.cam = S.cam ? [...S.cam] : null; localStorage.setItem('radarITBI', JSON.stringify(o)); } catch (e) {} }
 const skey = (tipo = S.tipo, dim = S.dim, fx = S.fx) => fx === '*' ? `${tipo}|todos|todos` : `${tipo}|${dim}|${fx}`;
+/* ── período (30/09, I-044): data inicial e final em dias desde 2006-01-01; null = sem limite (padrão = tudo). Filtra os
+   NEGÓCIOS (lotes do mapa, cartão do lote, página do Prédio, comparáveis, tabela de lotes do distrito) e recorta os
+   gráficos por trimestre. As métricas "12 m" dos distritos (cor do mapa, KPIs) continuam sendo os últimos 12 meses da base. ── */
+const DAY0 = Date.UTC(2006, 0, 1);
+const lastDay = () => Math.round((Date.parse(M.last_date) - DAY0) / 864e5);
+const isoDay = v => { if (!v) return null; const t = Date.parse(String(v).slice(0, 10) + 'T00:00:00Z'); return isNaN(t) ? null : Math.round((t - DAY0) / 864e5); };
+const dIso = d => d == null ? '' : new Date(DAY0 + d * 864e5).toISOString().slice(0, 10);
+const perOn = () => S.d0 != null || S.d1 != null;
+const inPer = d => (S.d0 == null || d >= S.d0) && (S.d1 == null || d <= S.d1);
+const perLabel = () => perOn() ? `${S.d0 != null ? fDate(S.d0) : '01/01/2006'} a ${S.d1 != null ? fDate(S.d1) : fDate(lastDay())}` : 'todo o período';
+const qOfDay = d => { const t = new Date(DAY0 + d * 864e5); return (t.getUTCFullYear() - 2006) * 4 + Math.floor(t.getUTCMonth() / 3); };
+const perQ0 = () => S.d0 != null ? Math.max(0, qOfDay(S.d0)) : 0;
+const perQ1 = () => S.d1 != null ? Math.min(NQ - 1, qOfDay(S.d1)) : NQ - 1;
+let QEND = NQ - 1;   // último trimestre desenhado nos gráficos (recalculado a cada render pelo período)
+function setPer(a, b) {
+  let d0 = isoDay(a), d1 = isoDay(b);
+  if (d0 != null && d1 != null && d0 > d1) [d0, d1] = [d1, d0];
+  if (d0 != null && d0 <= 0) d0 = null;
+  if (d1 != null && d1 >= lastDay()) d1 = null;
+  S.d0 = d0; S.d1 = d1;
+  Object.values(DFILE).forEach(F => { F._per = null; });
+  render();
+  if (LC.key && S.view === 'cidade') { const [cd, id] = LC.key.split(':'); const F = DFILE[cd], l = F && F.lots.find(x => x.id === id); if (l) lotCard(cd, l); }
+}
+/* estatísticas dos lotes de um distrito dentro do período, no grupo do seletor (cache por distrito × período × tipo) */
+function perStats(F) {
+  const key = `${S.d0}|${S.d1}|${S.tipo}`;
+  if (F._per && F._per.key === key) return F._per;
+  const d = F.deals, n = new Map(), last = new Map(), px = new Map();
+  for (let k = 0; k < d.d.length; k++) {
+    if (!inPer(d.d[k])) continue;
+    const li = d.li[k]; n.set(li, (n.get(li) || 0) + 1); if (!(last.get(li) >= d.d[k])) last.set(li, d.d[k]);
+    if (!d.ok[k] || grpOf(TIPO_OF[d.t[k]]) !== S.tipo) continue;
+    const pr = rsOf(d, k); if (pr == null) continue;
+    let a = px.get(li); if (!a) px.set(li, a = []); a.push(pr);
+  }
+  const p = new Map(); px.forEach((a, li) => p.set(li, [a.length, Math.round(qt(a, .25)), Math.round(med(a)), Math.round(qt(a, .75))]));
+  return (F._per = {key, n, last, p});
+}
+/* n, preço mediano e última venda de UM lote dentro do período, no grupo pedido (cartão e página do Prédio) */
+function lotPer(F, l, grp) {
+  const d = F.deals, ks = lotDeals(F, l.i).filter(k => inPer(d.d[k])), a = [];
+  let last = null;
+  ks.forEach(k => { if (last == null || d.d[k] > last) last = d.d[k]; if (d.ok[k] && grpOf(TIPO_OF[d.t[k]]) === grp) { const pr = rsOf(d, k); if (pr != null) a.push(pr); } });
+  return {ks, n: ks.length, last, p: a.length ? [a.length, Math.round(qt(a, .25)), Math.round(med(a)), Math.round(qt(a, .75))] : null};
+}
 const sLabel = () => `${GRP_LB[S.tipo] || TIPO_LB[S.tipo]} · ${S.fx === '*' ? 'todas as faixas' : fxLab(S.dim, S.fx)}`;
 
 /* ── séries (mediana móvel 12 m com IQR e n) ─────────────── */
@@ -187,6 +233,7 @@ const CORE_PARAMS = [
   {k: 'raio', get: () => String(S.radius), set: v => { S.radius = +v || 1; }, def: '1', views: ['predio']},
   {k: 'jan', get: () => String(S.compYears), set: v => { S.compYears = +v || 2; }, def: '2', views: ['predio']},
   {k: 'qmin', get: () => String(S.qmin), set: v => { S.qmin = +v || 30; }, def: '30', views: ['quadrante']},
+  {k: 'per', get: () => (perOn() ? dIso(S.d0) + ',' + dIso(S.d1) : ''), set: v => { const [a, b] = String(v || '').split(','); S.d0 = isoDay(a); S.d1 = isoDay(b); }, def: ''},
 ];
 const allParams = () => CORE_PARAMS.concat(REG.params);
 const pdef = p => String(typeof p.def === 'function' ? p.def() : p.def);
@@ -265,6 +312,9 @@ $('dtMet').addEventListener('click', e => { const b = e.target.closest('button[d
 $('dtSearch').addEventListener('input', () => renderDistTip());
 $('bldOnlyStr').addEventListener('change', e => { S.bldOnlyStr = e.target.checked; renderBldTable(); });
 $('radius').addEventListener('input', e => { S.radius = +e.target.value; renderComps(); syncUrl(); });
+$('perIni').addEventListener('change', e => setPer(e.target.value, $('perFim').value));
+$('perFim').addEventListener('change', e => setPer($('perIni').value, e.target.value));
+$('perTudo').addEventListener('click', () => setPer('', ''));
 $('compYears').addEventListener('change', e => { S.compYears = +e.target.value; renderComps(); syncUrl(); });
 $('nav').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (b) setView(b.dataset.view); });
 /* mapa de calor: a roda do mouse rola a PÁGINA. O dataZoom "inside" do ECharts engole a roda (preventDefault) mesmo com zoom e
@@ -299,14 +349,16 @@ function syncControls() {
   $('radius').value = S.radius; $('radiusVal').textContent = nf1.format(S.radius) + ' km'; $('compYears').value = S.compYears; $('bldOnlyStr').checked = S.bldOnlyStr;
   $('distSel').innerHTML = DCODES.slice().sort((a, b) => dname(a).localeCompare(dname(b), 'pt')).map(cd => `<option value="${cd}"${cd === S.cd ? ' selected' : ''}>${esc(dname(cd))}</option>`).join('');
   $('lastQ').textContent = `${fDate(Math.round((Date.parse(M.last_date) - Date.UTC(2006, 0, 1)) / 864e5))} (séries até ${M.last_q})`;
+  $('perIni').value = dIso(S.d0); $('perFim').value = dIso(S.d1); $('perIni').max = $('perFim').max = M.last_date; $('perTudo').hidden = !perOn(); $('periodo').classList.toggle('on', perOn());
   const rn = typeof V.railNote === 'function' ? V.railNote() : V.railNote;
   const rl = typeof V.estratoLabel === 'function' ? V.estratoLabel() : sLabel();
-  $('railNote').innerHTML = `Estrato ativo:<br><b>${esc(rl)}</b><br><span class="muted">${esc(rn || railNotePadrao())}</span>`;
+  $('railNote').innerHTML = `Estrato ativo:<br><b>${esc(rl)}</b>${perOn() ? `<br><b>Período: ${esc(perLabel())}</b>` : ''}<br><span class="muted">${esc(rn || railNotePadrao())}</span>`;
   REG.views.forEach(v => { const el = $('v-' + v.id); if (el) el.hidden = v.id !== S.view; });
 }
 let lastView = null;
 function render() {
   S.fromView = lastView; lastView = S.view;   // vista do render anterior: a vista sabe se a troca veio de dentro dela
+  QEND = perOn() ? perQ1() : NQ - 1;
   syncControls(); save(); syncUrl();
   const v = viewDef(S.view) || viewDef('cidade');
   safe('vista ' + v.id, () => v.render());
@@ -325,7 +377,7 @@ function radarState() {
   const V = viewDef(S.view) || {};
   const rn = typeof V.railNote === 'function' ? V.railNote() : V.railNote;
   const rl = typeof V.estratoLabel === 'function' ? V.estratoLabel() : sLabel();
-  return {view: S.view, estrato: rl, nota: rn || railNotePadrao(),
+  return {view: S.view, estrato: rl + (perOn() ? ' · ' + perLabel() : ''), nota: rn || railNotePadrao(),
     views: geo.concat(rad).map(v => ({id: v.id, label: v.label, sub: v.sub || '', group: v.group === 'geo' ? 'geo' : 'radar'}))};
 }
 function publish() { try { window.dispatchEvent(new CustomEvent('radar:state', {detail: radarState()})); } catch (e) { /* sem ouvinte */ } }
@@ -507,12 +559,15 @@ function cityLotsRefresh() {
   const [lo, hi] = lotColorScale(), feats = [], showL = camHas('lotes'), showP = camHas('planta');
   for (const cd of MCS.lotsCds) {
     const F = DFILE[cd]; if (!F) continue;
+    const PS = perOn() ? perStats(F) : null;   // período: só lotes com negócio no intervalo, cor pela mediana no intervalo
     for (const l of F.lots) {
       const isPl = l.pl > 0 && l.pl >= l.n * 0.5;
       const match = grpOf(l.t) === S.tipo;
       if (isPl ? !showP : !showL) continue;
+      if (PS && !PS.n.get(l.i)) continue;
+      const pp = PS ? (PS.p.get(l.i) || null) : l.p;
       feats.push({type: 'Feature', geometry: lotFeature(l), properties: {cd, i: l.i, m: match || isPl ? 1 : 0, pl: l.pl > 0 ? 1 : 0, hl: ruaHas(cd, l.i) ? 1 : 0,
-        fc: isPl ? css('--pl') : l.p && match ? priceColor(l.p[2], lo, hi) : css('--gray-cell')}});
+        fc: isPl ? css('--pl') : pp && match ? priceColor(pp[2], lo, hi) : css('--gray-cell')}});
     }
   }
   MCS.lotsFC = {type: 'FeatureCollection', features: feats};
@@ -520,10 +575,11 @@ function cityLotsRefresh() {
   visL(H.map, 'app-lots-fill', showL || showP); visL(H.map, 'app-lots-line', showL || showP); visL(H.map, 'app-lots-hl', showL || showP);
 }
 function lotTip(l) {
-  const u = l.u, p = l.p, g = grpOf(l.t) || S.tipo;
-  const rows = [['Tipo predominante', TIPO_LB[l.t] || l.t], ['Negócios (todos / 5 anos)', `${nf0.format(l.n)} / ${nf0.format(l.n5)}`],
-    [`${PU(g)} 5 anos (mediana)`, p ? `${fPrice(p[2], g)} · IQR ${nf0.format(p[1])}–${nf0.format(p[3])} · n=${p[0]}` : 'sem venda elegível'],
-    ['Última venda', fDate(l.d2)]];
+  const u = l.u, g = grpOf(l.t) || S.tipo, F = DFILE[l.cd], per = perOn() && F ? lotPer(F, l, g) : null, p = per ? per.p : l.p;
+  const rows = [['Tipo predominante', TIPO_LB[l.t] || l.t],
+    per ? ['Negócios no período', `${nf0.format(per.n)} de ${nf0.format(l.n)} · ${perLabel()}`] : ['Negócios (todos / 5 anos)', `${nf0.format(l.n)} / ${nf0.format(l.n5)}`],
+    [`${PU(g)} ${per ? 'no período' : '5 anos'} (mediana)`, p ? `${fPrice(p[2], g)} · IQR ${nf0.format(p[1])}–${nf0.format(p[3])} · n=${p[0]}` : 'sem venda elegível'],
+    ['Última venda', fDate(per ? per.last : l.d2)]];
   if (u) rows.push([`Cadastro (IPTU ${M.iptu_perfil || ''})`, `${nf0.format(u[0])} unid.${u[1] ? ' · ' + nf0.format(u[1]) + ' aptos' : ''}${u[3] ? ' · ' + u[3] + ' pav.' : ''}${u[4] ? ' · ACC ' + u[4] : ''}`]);
   if (l.pl) rows.push(['Planta', nf0.format(l.pl) + ' unidades vendidas sobre o terreno']);
   if (l.qa) rows.push(['Anúncios QuintoAndar', `${l.qa.ns} venda · ${l.qa.nr} aluguel`]);
@@ -532,6 +588,7 @@ function lotTip(l) {
 function renderCityLegend(extra) {
   const P = metricPaint(), lg = [P.legend];
   if (!P.none) lg.push(`<span class="it"><i class="dot" style="border-radius:2px;background:var(--gray-cell)"></i>n abaixo do mínimo (cinza)</span>`);
+  if (perOn()) lg.push(`<span class="it"><b style="font-weight:500;color:var(--ink)">Período ${esc(perLabel())}</b>: lotes, negócios e gráficos filtrados; a cor dos distritos segue sendo os últimos 12 meses da base</span>`);
   REG.layers.slice().sort(layerSort).forEach(l => { if (!camHas(l.id)) return; const h = l.legend ? (() => { try { return l.legend(); } catch (e) { logErr('legenda ' + l.id + ': ' + e); return ''; } })() : ''; if (h) lg.push(h); });
   if (extra) lg.push(extra);
   $('mapLegend').innerHTML = lg.join('');
@@ -668,7 +725,8 @@ function wireCity() {
 /* trajetória por faixa (cidade ou distrito), com IQR da faixa em foco e cinza onde n < mínimo */
 function renderTraj(id, cd, full, legendEl, q0 = QF) {
   const c = chart(id); if (!c) return;
-  const X = Q.slice(q0), faixas = FXD(S.dim), cols = fxColors(S.dim);
+  if (perOn()) q0 = Math.max(q0, perQ0());
+  const X = Q.slice(q0, QEND + 1), faixas = FXD(S.dim), cols = fxColors(S.dim);
   const focus = S.fx === '*' ? 'todos' : S.fx;
   const keys = [['todos', skey(S.tipo, S.dim, '*'), css('--ink')]].concat(faixas.map((f, i) => [f, skey(S.tipo, S.dim, f), cols[i]]));
   const series = [], gray = [];
@@ -702,22 +760,24 @@ function renderTraj(id, cd, full, legendEl, q0 = QF) {
       if (cd !== 'SP' && S.cityRef) { const x = st(ser('SP', skey(), true), q0 + j); if (x && x.ok) rows.push(['Cidade (estrato)', nf0.format(x.m), css('--muted')]); }
       return tip(`${X[j]} · ${PU()}, 12 meses até o trimestre`, rows, `${dname(cd)} · ${GRP_LB[S.tipo] || TIPO_LB[S.tipo]}`);
     }}),
-    dataZoom: q0 === QF ? [{type: 'inside', startValue: cd === 'SP' ? 0 : Math.max(0, winStart() - QF)}] : [],
+    dataZoom: !perOn() && q0 === QF ? [{type: 'inside', startValue: cd === 'SP' ? 0 : Math.max(0, winStart() - QF)}] : [],
     series,
   }), true);
   if (legendEl) legendEl.innerHTML = keys.map(([f, k, col]) => `<span class="it"><i class="lk" style="background:${col};height:${f === focus ? 3 : 2}px"></i>${f === 'todos' ? 'Todas' : esc(fxLab(S.dim, f))}</span>`).join('') +
     (cd !== 'SP' && S.cityRef ? `<span class="it"><i class="lk" style="background:var(--muted)"></i>cidade</span>` : '') + `<span class="it muted">cinza: n &lt; ${MIN}</span>`;
 }
 function volChart(id, cd, q0) {
-  const c = chart(id); if (!c) return; const v = D.vol[cd], X = Q.slice(q0);
+  const c = chart(id); if (!c) return; const v = D.vol[cd];
+  if (perOn()) q0 = Math.max(q0, perQ0());
+  const X = Q.slice(q0, QEND + 1);
   c.setOption(Object.assign(base(), {
     grid: {left: 50, right: 12, top: 10, bottom: 40},
     xAxis: ax({type: 'category', data: X, axisLabel: {color: css('--muted'), fontSize: 10.5, interval: i => /^1T/.test(X[i]) && (+X[i].slice(-4)) % (X.length > 50 ? 2 : 1) === 0, formatter: v => v.slice(-4)}}),
     yAxis: ax({type: 'value', axisLabel: {color: css('--muted'), fontSize: 10.5, formatter: v => axM2(v)}}),
     tooltip: Object.assign(base().tooltip, {trigger: 'axis', formatter: ps => { const i = q0 + ps[0].dataIndex;
       return tip(`${Q[i]} · ${dname(cd)}`, [['SQL próprio', `${nf0.format(v.own[i])} · ${fMi(v.rv[i])}`, css('--s1')], ['Planta', `${nf0.format(v.pl[i])} · ${fMi(v.rvp[i])}`, css('--pl')], ['Em bloco (≥5 unid.)', nf0.format(v.bl[i])]], 'contagem de negócios (unidade = SQL + data + matrícula)'); }}),
-    series: [{name: 'SQL próprio', type: 'bar', stack: 'v', data: v.own.slice(q0), itemStyle: {color: css('--s1')}, barCategoryGap: '20%'},
-      {name: 'Planta', type: 'bar', stack: 'v', data: v.pl.slice(q0), itemStyle: {color: css('--pl')}}],
+    series: [{name: 'SQL próprio', type: 'bar', stack: 'v', data: v.own.slice(q0, QEND + 1), itemStyle: {color: css('--s1')}, barCategoryGap: '20%'},
+      {name: 'Planta', type: 'bar', stack: 'v', data: v.pl.slice(q0, QEND + 1), itemStyle: {color: css('--pl')}}],
   }), true);
 }
 
@@ -789,7 +849,7 @@ function renderDistrito() {
     kpi('Com financiamento', s.fin != null ? nf0.format(s.fin) + '%' : '—', `cidade ${sp.fin != null ? nf0.format(sp.fin) + '%' : '—'}`),
     kpi(`Fora do preço ${LAST_FULL_Y}`, s.excl != null ? nf0.format(s.excl) + '%' : '—', s.exclPl != null ? `planta ${nf0.format(s.exclPl)}% · ${nf0.format(s.uni)} vendas` : ''),
   ].join('');
-  const q0 = winStart();
+  const q0 = perOn() ? Math.max(QF, perQ0()) : winStart();   // com período, a janela de anos dá lugar ao período
   volChart('smVol', cd, q0);
   smFin(cd, q0); smNovo(cd, q0); smGiro(cd); exclHeat(cd);
   safe('distritos por tipologia', renderDistTip);
@@ -803,7 +863,7 @@ function priceNote(cd) {
   $('smPriceNote').innerHTML = e ? `Em ${LAST_FULL_Y}, ${nf0.format(e.uni[yi])} vendas no universo; <b>${nf0.format(e.pl[yi])}</b> de planta e <b>${nf0.format(e.fl[yi])}</b> sinalizadas ficaram fora do R$/m² (${nf0.format((e.pl[yi] + e.fl[yi]) / Math.max(1, e.uni[yi]) * 100)}%). Ver o mapa de exclusão abaixo.` : '';
 }
 function smLine(id, q0, ys, fmt, extra = {}) {
-  const c = chart(id); if (!c) return; const X = Q.slice(q0);
+  const c = chart(id); if (!c) return; const X = Q.slice(q0, QEND + 1);
   c.setOption(Object.assign(base(), {grid: {left: 44, right: 12, top: 8, bottom: 24},
     xAxis: ax({type: 'category', data: X, boundaryGap: false, axisLabel: {color: css('--muted'), fontSize: 10, interval: i => /^1T/.test(X[i]) && (+X[i].slice(-4)) % (X.length > 44 ? 2 : 1) === 0, formatter: v => v.slice(-4)}}),
     yAxis: ax(Object.assign({type: 'value', axisLabel: {color: css('--muted'), fontSize: 10, formatter: fmt}}, extra.y || {})),
@@ -811,15 +871,15 @@ function smLine(id, q0, ys, fmt, extra = {}) {
 }
 function smFin(cd, q0) {
   const v = D.vol[cd], vc = D.vol.SP, rows = i => v.fin[i];
-  const gray = []; for (let i = q0; i < NQ; i++) if (v.fin[i] == null && v.nres[i] > 0) gray.push([i - q0, 0]);
+  const gray = []; for (let i = q0; i <= QEND; i++) if (v.fin[i] == null && v.nres[i] > 0) gray.push([i - q0, 0]);
   smLine('smFin', q0, [
-    {type: 'line', data: v.fin.slice(q0), symbol: 'none', lineStyle: {color: css('--s1'), width: 2}, itemStyle: {color: css('--s1')}},
-    ...(S.cityRef ? [{type: 'line', data: vc.fin.slice(q0), symbol: 'none', lineStyle: {color: css('--muted'), width: 1.2, type: 'dashed'}, itemStyle: {color: css('--muted')}}] : []),
+    {type: 'line', data: v.fin.slice(q0, QEND + 1), symbol: 'none', lineStyle: {color: css('--s1'), width: 2}, itemStyle: {color: css('--s1')}},
+    ...(S.cityRef ? [{type: 'line', data: vc.fin.slice(q0, QEND + 1), symbol: 'none', lineStyle: {color: css('--muted'), width: 1.2, type: 'dashed'}, itemStyle: {color: css('--muted')}}] : []),
     {type: 'scatter', data: gray, symbolSize: 4, itemStyle: {color: css('--gray-cell')}}],
     v => nf0.format(v) + '%', {tip: ps => { const i = q0 + ps[0].dataIndex; return tip(Q[i], [['Distrito', v.fin[i] != null ? nf1.format(v.fin[i]) + '%' : `n baixo (${v.nres[i]})`, css('--s1')], ['n (vendas residenciais)', nf0.format(v.nres[i])], ['Cidade', vc.fin[i] != null ? nf1.format(vc.fin[i]) + '%' : '—', css('--muted')]], 'antes de 2011 o tipo de financiamento não é preenchido; usa-se valor financiado > 0'); }});
 }
 function smNovo(cd, q0) {
-  const v = D.vol[cd], X = Q.slice(q0);
+  const v = D.vol[cd], X = Q.slice(q0, QEND + 1);
   const tot = i => (v.apn[i] || 0) + (v.pl[i] || 0);
   const sh = (a, i) => tot(i) >= MIN ? a / tot(i) * 100 : null;
   const nov = X.map((_, j) => sh(v.nov[q0 + j], q0 + j)), us = X.map((_, j) => sh(v.apn[q0 + j] - v.nov[q0 + j], q0 + j)), pl = X.map((_, j) => sh(v.pl[q0 + j], q0 + j));
@@ -831,7 +891,8 @@ function smNovo(cd, q0) {
 }
 function smGiro(cd) {
   const c = chart('smGiro'); if (!c) return; const e = D.exc[cd], ec = D.exc.SP;
-  const y0 = Math.max(ANOS[0], ANOS[ANOS.length - 1] - S.years), ys = ANOS.filter(y => y >= y0);
+  const y0 = perOn() ? 2006 + Math.floor(perQ0() / 4) : Math.max(ANOS[0], ANOS[ANOS.length - 1] - S.years), y1 = 2006 + Math.floor(QEND / 4);
+  const ys = ANOS.filter(y => y >= y0 && y <= y1);
   const g = (E, y) => { const r = E && E.giro ? E.giro[YI(y)] : null; return r && r[1] ? r[0] / r[1] * 100 : null; };
   c.setOption(Object.assign(base(), {grid: {left: 44, right: 12, top: 8, bottom: 24},
     xAxis: ax({type: 'category', data: ys.map(String), axisLabel: {color: css('--muted'), fontSize: 10}}),
@@ -896,20 +957,23 @@ function lotRows(F) {
 const normTxt = s => (s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 function renderBldTable() {
   const F = DFILE[S.cd]; if (!F) return;
-  const rows = lotRows(F), total = rows.length;
-  $('bldSub').textContent = `${nf0.format(total)} lotes com venda${S.bldOnlyStr ? ' (' + (GRP_LB[S.tipo] || TIPO_LB[S.tipo]).toLowerCase() + ')' : ''}. Clique no nome para abrir o prédio; clique no cabeçalho para ordenar.`;
+  const PS = perOn() ? perStats(F) : null;
+  let rows = lotRows(F);
+  if (PS) rows = rows.filter(l => PS.n.get(l.i)).map(l => Object.assign({}, l, {n5: PS.n.get(l.i) || 0, p: PS.p.get(l.i) || null, d2: PS.last.get(l.i) ?? null}));
+  const total = rows.length;
+  $('bldSub').textContent = `${nf0.format(total)} lotes com venda${PS ? ' no período ' + perLabel() : ''}${S.bldOnlyStr ? ' (' + (GRP_LB[S.tipo] || TIPO_LB[S.tipo]).toLowerCase() + ')' : ''}. Clique no nome para abrir o prédio; clique no cabeçalho para ordenar.`;
   table($('bldTable'), 'bld', [
     {k: 'nm', label: 'Prédio / endereço', cls: 'wrap', sv: r => r.nm || r.end, f: r => `<button class="linkbtn" type="button">${esc(r.nm || r.end || r.id)}</button>${r.nm && r.end ? `<div class="qtag" style="margin:0">${esc(r.end)}</div>` : ''}`},
     {k: 't', label: 'Tipo', f: r => `<span class="pill${r.pl ? ' pl' : ''}">${esc(TIPO_LB[r.t] || r.t)}${r.pl ? ' · planta ' + r.pl : ''}</span>`},
     {k: 'u', label: 'Unid. IPTU', n: 1, sv: r => r.u ? r.u[0] : null, f: r => r.u ? nf0.format(r.u[0]) : '—'},
     {k: 'acc', label: 'ACC', n: 1, title: 'ano de conclusão da construção (IPTU)', sv: r => r.u ? r.u[4] : null, f: r => r.u && r.u[4] ? r.u[4] : '—'},
     {k: 'pad', label: 'Padrão ⓘ', title: 'Padrão construtivo do cadastro do IPTU (Prefeitura de SP), que vem em cada guia de ITBI: A = mais simples … F = mais alto (tabela de valores de construção da Lei 10.235/1986). Cadastro vigente quando o arquivo foi gerado.', sv: r => r.u ? r.u[5] : null, f: r => r.u && r.u[5] ? `<span title="${esc(r.u[5])}">${esc((r.u[5].match(/padr[ãa]o ([A-F])/i) || [])[1] || '—')}</span>` : '—'},
-    {k: 'n5', label: 'Vendas 5a', n: 1},
+    {k: 'n5', label: PS ? 'Vendas no período' : 'Vendas 5a', n: 1},
     {k: 'g1', label: 'Giro 12 m', n: 1, title: 'aptos vendidos em 12 meses ÷ aptos do prédio (IPTU)', sv: r => r.g1 && r.g1[1] ? r.g1[0] / r.g1[1] : null, f: r => r.g1 && r.g1[1] ? nf1.format(r.g1[0] / r.g1[1] * 100) + '%' : '—'},
-    {k: 'p', label: PU() + ' 5a (IQR)', n: 1, sv: r => r.p ? r.p[2] : null, f: r => r.p ? priceCell({n: r.p[0], a: r.p[1], m: r.p[2], b: r.p[3], ok: r.p[0] >= 3}) : '<span class="gray">—</span>'},
-    {k: 'd2', label: 'Última venda', n: 1, f: r => fDate(r.d2)},
+    {k: 'p', label: PU() + (PS ? ' no período (IQR)' : ' 5a (IQR)'), n: 1, sv: r => r.p ? r.p[2] : null, f: r => r.p ? priceCell({n: r.p[0], a: r.p[1], m: r.p[2], b: r.p[3], ok: r.p[0] >= 3}) : '<span class="gray">—</span>'},
+    {k: 'd2', label: PS ? 'Última venda no período' : 'Última venda', n: 1, f: r => fDate(r.d2)},
     {k: 'qa', label: 'Anúncios', n: 1, sv: r => r.qa ? r.qa.n : null, f: r => r.qa ? `${r.qa.ns}v · ${r.qa.nr}a` : '—'},
-  ], rows, {sort: {k: 'n5', d: 'desc'}, page: 25, pageKey: S.cd + '|' + S.tipo + '|' + S.bldOnlyStr + '|' + normTxt($('bldSearch').value), rowLink: true, onRow: r => openLot(S.cd, r.id)});
+  ], rows, {sort: {k: 'n5', d: 'desc'}, page: 25, pageKey: S.cd + '|' + S.tipo + '|' + S.bldOnlyStr + '|' + S.d0 + '|' + S.d1 + '|' + normTxt($('bldSearch').value), rowLink: true, onRow: r => openLot(S.cd, r.id)});
 }
 
 /* ════════ PRÉDIO ════════════════════════════════════════ */
@@ -933,8 +997,9 @@ function renderPredio() {
   const F = DFILE[S.lotCd];
   if (!F) { $('pHead').innerHTML = '<div class="loading">Carregando…</div>'; fetchDist(S.lotCd).then(() => { if (S.view === 'predio') renderPredio(); }).catch(() => { $('pHead').innerHTML = '<div class="empty">Dados do lote indisponíveis: abra a página pela URL do serve.py.</div>'; }); return; }
   const l = curLot(); if (!l) { $('pHead').innerHTML = '<div class="empty">Lote não encontrado.</div>'; return; }
-  const d = F.deals, ks = lotDeals(F, l.i), u = l.u;
+  const d = F.deals, u = l.u;
   const lotTipo = grpOf(l.t) || S.tipo;   // grupo do tipo predominante do lote (I-036)
+  const per = perOn() ? lotPer(F, l, lotTipo) : null, ks = per ? per.ks : lotDeals(F, l.i), pp = per ? per.p : l.p;
   $('pHead').innerHTML = `<h3>${esc(l.nm || l.end || 'Lote ' + l.id)}</h3><span class="meta">${esc(l.nm && l.end ? l.end + ' · ' : '')}${esc(dname(S.lotCd))} · lote fiscal ${l.id.slice(0, 3)}.${l.id.slice(3, 6)}.${l.id.slice(6, 10)}${l.id.slice(10) !== '00' ? ' · condomínio ' + l.id.slice(10) : ''}</span>` +
     `<span class="pill">${esc(TIPO_LB[l.t] || l.t)}</span>${l.pl ? `<span class="pill pl">planta: ${l.pl} unid.</span>` : ''}` +
     (u ? `<span class="meta">IPTU ${esc(M.iptu_perfil || '')}: ${nf0.format(u[0])} unidades${u[1] ? ` (${nf0.format(u[1])} aptos, ${nf0.format(u[2])} vagas)` : ''}${u[3] ? ` · ${u[3]} pav.` : ''}${u[4] ? ` · ACC ${u[4]}` : ''}${u[5] ? ` · ${esc(u[5])}` : ''}</span>` : '') +
@@ -943,10 +1008,10 @@ function renderPredio() {
   $('pBack').onclick = () => openDist(S.lotCd);
   const ok = ks.filter(k => d.ok[k]), rs5 = ok.filter(k => d.d[k] >= l.d2 - 5 * 365).map(k => rsOf(d, k)).filter(Boolean);
   $('pKpis').innerHTML = [
-    kpi('Negócios', nf0.format(l.n), `${nf0.format(l.n5)} em 5 anos · ${nf0.format(ok.length)} no preço`),
-    kpi(PU(lotTipo) + ' 5 anos', l.p ? fPrice(l.p[2], lotTipo) : '—', l.p ? `IQR ${nf0.format(l.p[1])}–${nf0.format(l.p[3])} · n=${l.p[0]}` : 'sem venda elegível'),
+    kpi(per ? 'Negócios no período' : 'Negócios', nf0.format(per ? per.n : l.n), per ? `de ${nf0.format(l.n)} no total · ${nf0.format(ok.length)} no preço · ${perLabel()}` : `${nf0.format(l.n5)} em 5 anos · ${nf0.format(ok.length)} no preço`),
+    kpi(PU(lotTipo) + (per ? ' no período' : ' 5 anos'), pp ? fPrice(pp[2], lotTipo) : '—', pp ? `IQR ${nf0.format(pp[1])}–${nf0.format(pp[3])} · n=${pp[0]}` : 'sem venda elegível'),
     kpi('Giro 12 m', l.g1 && l.g1[1] ? nf1.format(l.g1[0] / l.g1[1] * 100) + '%' : '—', l.g1 ? `${l.g1[0]} de ${l.g1[1] || '—'} aptos` : 'não é condomínio de aptos'),
-    kpi('Última venda', fDate(l.d2), ''),
+    kpi(per ? 'Última venda no período' : 'Última venda', fDate(per ? per.last : l.d2), ''),
     kpi('Anúncios no lote', l.qa ? nf0.format(l.qa.n) : '0', l.qa ? `${l.qa.ns} venda · ${l.qa.nr} aluguel (jun/2026)` : 'QuintoAndar'),
   ].join('');
   const tipSub = $('pTipSub'); if (tipSub) tipSub.textContent = `Unidades do cadastro (IPTU ${M.iptu_perfil || ''}) e anúncios QuintoAndar dentro do lote (foto de 20/06/2026).`;
@@ -971,7 +1036,8 @@ function renderPHist(F, l, ks, lotTipo, id = 'pHist', mini = false) {
   const band = [], line = [];
   if (s) for (let i = QF; i < NQ; i++) { const x = st(s, i); if (x && x.ok) { const t = Date.UTC(Q0Y(i), ((i % 4) * 3) + 2, 15); line.push([t, x.m]); band.push([t, x.a, x.b]); } }
   c.setOption(Object.assign(base(), {grid: mini ? {left: 48, right: 10, top: 8, bottom: 24} : {left: 56, right: 14, top: 12, bottom: 30},
-    xAxis: ax({type: 'time', minInterval: 365.25 * 864e5, axisLabel: {color: css('--muted'), fontSize: 10, formatter: '{yyyy}', hideOverlap: true}}),
+    xAxis: ax({type: 'time', minInterval: 365.25 * 864e5, min: S.d0 != null ? DAY0 + S.d0 * 864e5 : undefined, max: S.d1 != null ? DAY0 + (S.d1 + 1) * 864e5 : undefined,
+      axisLabel: {color: css('--muted'), fontSize: 10, formatter: '{yyyy}', hideOverlap: true}}),
     yAxis: ax({type: 'value', scale: true, axisLabel: {color: css('--muted'), fontSize: 10, formatter: v => nf0.format(v)}}),
     tooltip: Object.assign(base().tooltip, {trigger: 'item', formatter: p => { if (p.seriesName !== 'vendas') return p.seriesName === 'distrito' ? tip(`${dname(S.lotCd)} · mesmo estrato`, [['Mediana 12 m', nf0.format(p.data[1])]].concat(typeof band !== 'undefined' && band[p.dataIndex] ? [['Metade central (25%–75%)', `${nf0.format(band[p.dataIndex][1])} – ${nf0.format(band[p.dataIndex][2])}`]] : []), 'comparação com o distrito do lote') : '';
       const k = p.data.k; return tip(`${fDate(d.d[k])} · ${d.cp[k] || 'unidade'}`, [[PU(lotTipo), fPrice(p.data.value[1], lotTipo)], ['Valor (100%)', fR(d.v100[k])], [BASE[lotTipo] === 'm2t' ? 'Área do terreno' : 'Área construída', areaOf(d, k) ? nf0.format(areaOf(d, k)) + ' m²' : '—'],
@@ -1045,7 +1111,7 @@ function renderComps() {
     const byLot = new Map();
     need.forEach(cd => { const G = DFILE[cd]; if (!G) return; const d = G.deals;
       for (let k = 0; k < d.d.length; k++) {
-        if (!d.ok[k] || grpOf(TIPO_OF[d.t[k]]) !== lotTipo || d.d[k] < dmin) continue;   // mesmo GRUPO (loja + sala + escr contam juntos)
+        if (!d.ok[k] || grpOf(TIPO_OF[d.t[k]]) !== lotTipo || d.d[k] < dmin || !inPer(d.d[k])) continue;   // mesmo GRUPO (loja + sala + escr contam juntos); dentro do período
         if (fx !== '*' && fxOf(d, k, dim) !== fx) continue;
         const pr = rsOf(d, k); if (pr == null) continue;
         const L = G.lots[d.li[k]], dist = haversine(c0, L.c); if (dist > r) continue;
@@ -1055,7 +1121,7 @@ function renderComps() {
     const comps = [...byLot.values()].map(e => ({...e, n: e.rs.length, m: med(e.rs), last: Math.max(...e.ds)}));
     const allRs = comps.filter(e => !e.self).flatMap(e => e.rs), self = comps.find(e => e.self);
     const mAll = med(allRs), a = qt(allRs, .25), b = qt(allRs, .75);
-    $('compSub').textContent = `${GRP_LB1[lotTipo] || TIPO_LB[lotTipo]} · ${DIMLB[dim]} ${fx === '*' ? 'todas as faixas' : fxLab(dim, fx, lotTipo)}${S.fx === '*' && fx !== '*' ? ' (faixa mais comum no prédio; escolha outra no topo)' : ''} · raio ${nf1.format(r)} km · ${S.compYears * 12} meses · só negócios no preço.`;
+    $('compSub').textContent = `${GRP_LB1[lotTipo] || TIPO_LB[lotTipo]} · ${DIMLB[dim]} ${fx === '*' ? 'todas as faixas' : fxLab(dim, fx, lotTipo)}${S.fx === '*' && fx !== '*' ? ' (faixa mais comum no prédio; escolha outra no topo)' : ''} · raio ${nf1.format(r)} km · ${S.compYears * 12} meses${perOn() ? ' · período ' + perLabel() : ''} · só negócios no preço.`;
     $('compSummary').innerHTML = allRs.length ? `<b>${nf0.format(allRs.length)}</b> vendas comparáveis em ${comps.length - (self ? 1 : 0)} lotes · mediana <b>${fPrice(Math.round(mAll), lotTipo)}</b> (IQR ${nf0.format(a)}–${nf0.format(b)})` +
       (self ? ` · este prédio: <b>${fPrice(Math.round(self.m), lotTipo)}</b> (n=${self.n}) → <b>${fSig((self.m / mAll - 1) * 100)}</b> contra o entorno` : ' · este prédio não teve venda do mesmo estrato na janela') +
       (allRs.length < MIN ? ` <span class="gray">(n abaixo de ${MIN}: amplie raio ou janela)</span>` : '') : `Sem comparáveis do estrato no raio. Amplie o raio, a janela ou mude a faixa.`;
@@ -1124,13 +1190,14 @@ function lotCard(cd, l) {
     });
   }
   LC.key = cd + ':' + l.id; el.hidden = false; lotCardHl(l);
-  const d = F.deals, ks = lotDeals(F, l.i), grp = grpOf(l.t) || S.tipo, u = l.u;
+  const d = F.deals, grp = grpOf(l.t) || S.tipo, u = l.u;
+  const per = perOn() ? lotPer(F, l, grp) : null, ks = per ? per.ks : lotDeals(F, l.i), pp = per ? per.p : l.p;
   const nOk = ks.filter(k => d.ok[k]).length;
   el.innerHTML = `<button type="button" class="lc-x" data-close="1" aria-label="Fechar" title="Fechar (Esc)">×</button>` +
     `<div class="lc-h"><b>${esc(l.nm || l.end || 'Lote ' + l.id)}</b><span class="muted">${esc([l.nm && l.end ? l.end : null, dname(cd), TIPO_LB[l.t] || l.t].filter(Boolean).join(' · '))}</span>` +
     (u ? `<span class="muted">IPTU ${esc(M.iptu_perfil || '')}: ${nf0.format(u[0])} unid.${u[1] ? ` · ${nf0.format(u[1])} aptos` : ''}${u[3] ? ` · ${u[3]} pav.` : ''}${u[4] ? ` · ACC ${u[4]}` : ''}</span>` : '') + `</div>` +
-    `<div class="lc-k"><span><b>${nf0.format(l.n)}</b> negócios · <b>${nf0.format(l.n5)}</b> em 5 anos · <b>${nf0.format(nOk)}</b> no preço</span>` +
-    `<span><b>${l.p ? fPrice(l.p[2], grp) : '—'}</b>${l.p && baseOf(grp) === 'unid' ? ' por vaga' : ''} em 5 anos${l.p ? ` <small class="muted">IQR ${nf0.format(l.p[1])}–${nf0.format(l.p[3])} · n=${l.p[0]}</small>` : ' <small class="muted">(sem venda elegível)</small>'}</span></div>` +
+    `<div class="lc-k"><span>${per ? `<b>${nf0.format(per.n)}</b> negócios no período <small class="muted">(${esc(perLabel())}; ${nf0.format(l.n)} no total)</small>` : `<b>${nf0.format(l.n)}</b> negócios · <b>${nf0.format(l.n5)}</b> em 5 anos`} · <b>${nf0.format(nOk)}</b> no preço</span>` +
+    `<span><b>${pp ? fPrice(pp[2], grp) : '—'}</b>${pp && baseOf(grp) === 'unid' ? ' por vaga' : ''} ${per ? 'no período' : 'em 5 anos'}${pp ? ` <small class="muted">IQR ${nf0.format(pp[1])}–${nf0.format(pp[3])} · n=${pp[0]}</small>` : ' <small class="muted">(sem venda elegível)</small>'}</span></div>` +
     `<div id="lcChart" class="chart" style="height:170px"></div><p class="note lc-n">Pontos: negócios de ${esc((GRP_LB1[grp] || '').toLowerCase())} no lote (vazado = fora do preço); tracejado e faixa = mediana e IQR do distrito.</p>` +
     `<div class="tablewrap lc-t" id="lcDeals"></div>` +
     `<div class="lc-f"><button type="button" class="lc-btn" data-open="${esc(cd)}:${esc(l.id)}">Detalhes do lote →</button></div>`;
@@ -1147,7 +1214,7 @@ function lotCardDeals(F, ks) {
     {k: 'v', label: 'Valor', n: 1, title: 'valor declarado na guia', f: r => fR(r.v)},
     {k: 'rs', label: 'Preço', n: 1, title: 'na base do tipo do negócio (R$/m² construído, R$/m² de terreno ou R$ por vaga); em cinza, fora do preço com o motivo',
       f: r => r.rs == null || r.t === 'planta' ? '—' : r.ok ? fPrice(r.rs, grpOf(r.t)) : `<span class="gray" title="${esc(MOT[r.mo] || 'fora do preço')}">${fPrice(r.rs, grpOf(r.t))}</span>`},
-  ], rows, {sort: {k: 'd', d: 'desc'}, page: 6, pageKey: LC.key, rowAttr: r => r.ok ? '' : 'style="color:var(--muted)"'});
+  ], rows, {sort: {k: 'd', d: 'desc'}, page: 6, pageKey: LC.key + '|' + S.d0 + '|' + S.d1, rowAttr: r => r.ok ? '' : 'style="color:var(--muted)"'});
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && LC.key) lotCardClose(); });
 
@@ -1337,6 +1404,7 @@ window.RADAR = {
   TIPOS, GRP, GRP_LB, GRP_LB1, BASE, BASE_LB, DIMS_T, grpOf, baseOf, FXD, fxLab, PU, fPrice, rsOf, areaOf, lotCard, lotCardClose, ruasBusca, ruaIr,
   createBaseMap, wireMap, upsertSrc, addLayerOnce, visL, firstSymbol, rafThrottle, putImage, diamondImg, EMPTY_FC, lotFeature, decodeRings, haversine, BMAPS, collapseMaps,
   fetchDist, loadJSON, safe, logErr, render, setView, openDist, openLot, camHas, setLayer, setMetric, toast, syncUrl, renderSections, badgesHtml, LAYER_GROUPS,
+  perOn, inPer, perLabel, perStats, lotPer, setPer,
   renderLayerPanel, renderCityLegend, applyCity, normTxt,
   registerView, registerSection, registerBadge, registerMetric, registerLayer, registerPreset, registerParam, viewDef, viewOn, DISABLED,
   registerMapDecor, decorate, decorHits, decorTip, state: radarState,

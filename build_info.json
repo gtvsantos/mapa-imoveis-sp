@@ -1,5 +1,5 @@
 {
- "montado_em": "2026-09-30T10:56:13-03:00",
+ "montado_em": "2026-09-30T15:29:22-03:00",
  "proto": "/Users/gustavosantos/Documents/Obsidian Vault/Projet FIIs/Specific_fund_report/fii_quant/data/cache/itbi/proto",
  "modulos": [
   "m_aluguel",
@@ -7,6 +7,6 @@
   "m_flips",
   "m_terrenos"
  ],
- "tamanho_mb": 429.3,
+ "tamanho_mb": 431.0,
  "arquivos": 930
 }
